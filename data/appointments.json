@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "patientId": 1,
+    "patientName": "John Doe",
+    "date": "2024-01-25",
+    "time": "10:00 AM",
+    "reason": "Routine Checkup",
+    "notes": "Annual physical examination",
+    "status": "scheduled"
+  },
+  {
+    "id": 2,
+    "patientId": 2,
+    "patientName": "Jane Smith",
+    "date": "2024-01-26",
+    "time": "2:00 PM",
+    "reason": "Asthma Follow-up",
+    "notes": "Monitor asthma symptoms and medication effectiveness",
+    "status": "scheduled"
+  },
+  {
+    "id": 3,
+    "patientId": 1,
+    "patientName": "John Doe",
+    "date": "2024-01-15",
+    "time": "9:30 AM",
+    "reason": "Diabetes Management",
+    "notes": "Blood sugar monitoring and medication adjustment",
+    "status": "completed"
+  }
+]
