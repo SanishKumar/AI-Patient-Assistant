@@ -189,8 +189,7 @@ export function OverviewView({
           </div>
           <h2>
             One detail.
-            <br />
-            Two different stories.
+            <br /> Two different stories.
           </h2>
           <p>
             Your January note mentions a penicillin allergy. An August intake says no known drug
@@ -234,8 +233,7 @@ export function OverviewView({
           <span className="eyebrow">CLARITY COMES WITH CONTEXT</span>
           <h2>
             Not just a number.
-            <br />
-            The story behind it.
+            <br /> The story behind it.
           </h2>
           <p>
             Each observation takes you back to its source. Missing information stays visible.

@@ -71,7 +71,7 @@ export function SourceViewer({
                   : 'Awaiting source review'}
               </dd>
               <dt>Method</dt>
-              <dd>Manually authored fixture</dd>
+              <dd>Bundled synthetic example</dd>
               <dt>Evidence anchor</dt>
               <dd>
                 <Link2 size={14} />
