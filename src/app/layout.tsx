@@ -1,30 +1,17 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
-import { Navbar } from '@/components/Navbar'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Patient Assistant Dashboard',
-  description: 'AI-powered healthcare assistant dashboard',
+  title: 'Aether Health — Your connected health story',
+  description:
+    'An evidence-linked health record workspace. Explore a synthetic health timeline, compare source records, and prepare for a visit.',
+  robots: { index: false, follow: false },
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <div className="min-h-screen bg-background">
-          <Navbar />
-          <main className="container mx-auto px-4 py-8">
-            {children}
-          </main>
-        </div>
-      </body>
+      <body>{children}</body>
     </html>
   )
 }
