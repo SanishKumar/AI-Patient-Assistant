@@ -48,5 +48,7 @@ export interface VisitQuestion {
 }
 
 export const metricLabels: Record<Metric, string> = {
-  hba1c: 'HbA1c', systolic: 'Systolic blood pressure', ldl: 'LDL cholesterol',
+  hba1c: 'HbA1c',
+  systolic: 'Systolic blood pressure',
+  ldl: 'LDL cholesterol',
 }
