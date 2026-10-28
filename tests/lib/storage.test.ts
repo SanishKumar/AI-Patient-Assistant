@@ -1,13 +1,15 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { promises as fs } from 'fs'
 import { getPatients, getPatient, savePatients } from '@/lib/storage'
 import { Patient } from 'types'
 
 // Mock fs module
-jest.mock('fs', () => ({
+vi.mock('fs', () => ({
   promises: {
-    readFile: jest.fn(),
-    writeFile: jest.fn(),
-    access: jest.fn(),
-    mkdir: jest.fn(),
+    readFile: vi.fn(),
+    writeFile: vi.fn(),
+    access: vi.fn(),
+    mkdir: vi.fn(),
   },
 }))
 
@@ -31,28 +33,28 @@ describe('Storage Library', () => {
   ]
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   describe('getPatients', () => {
     it('should return patients when file exists', async () => {
-      const fs = require('fs')
-      fs.promises.readFile.mockResolvedValue(JSON.stringify(mockPatients))
-      fs.promises.access.mockResolvedValue(undefined)
+
+      vi.mocked(fs).readFile.mockResolvedValue(JSON.stringify(mockPatients))
+      vi.mocked(fs).access.mockResolvedValue(undefined)
 
       const patients = await getPatients()
       
-      expect(patients).equal(mockPatients)
-      expect(fs.promises.readFile).toHaveBeenCalledWith(
+      expect(patients).toEqual(mockPatients)
+      expect(vi.mocked(fs).readFile).toHaveBeenCalledWith(
         expect.stringContaining('patients.json'),
         'utf8'
       )
     })
 
     it('should return empty array when file does not exist', async () => {
-      const fs = require('fs')
-      fs.promises.readFile.mockRejectedValue(new Error('File not found'))
-      fs.promises.access.mockRejectedValue(new Error('Dir not found'))
+
+      vi.mocked(fs).readFile.mockRejectedValue(new Error('File not found'))
+      vi.mocked(fs).access.mockRejectedValue(new Error('Dir not found'))
 
       const patients = await getPatients()
       
@@ -62,9 +64,9 @@ describe('Storage Library', () => {
 
   describe('getPatient', () => {
     it('should return patient when found', async () => {
-      const fs = require('fs')
-      fs.promises.readFile.mockResolvedValue(JSON.stringify(mockPatients))
-      fs.promises.access.mockResolvedValue(undefined)
+
+      vi.mocked(fs).readFile.mockResolvedValue(JSON.stringify(mockPatients))
+      vi.mocked(fs).access.mockResolvedValue(undefined)
 
       const patient = await getPatient(1)
       
@@ -72,9 +74,9 @@ describe('Storage Library', () => {
     })
 
     it('should return null when patient not found', async () => {
-      const fs = require('fs')
-      fs.promises.readFile.mockResolvedValue(JSON.stringify(mockPatients))
-      fs.promises.access.mockResolvedValue(undefined)
+
+      vi.mocked(fs).readFile.mockResolvedValue(JSON.stringify(mockPatients))
+      vi.mocked(fs).access.mockResolvedValue(undefined)
 
       const patient = await getPatient(999)
       
@@ -84,16 +86,17 @@ describe('Storage Library', () => {
 
   describe('savePatients', () => {
     it('should save patients to file', async () => {
-      const fs = require('fs')
-      fs.promises.writeFile.mockResolvedValue(undefined)
-      fs.promises.access.mockResolvedValue(undefined)
+
+      vi.mocked(fs).writeFile.mockResolvedValue(undefined)
+      vi.mocked(fs).access.mockResolvedValue(undefined)
 
       await savePatients(mockPatients)
       
-      expect(fs.promises.writeFile).toHaveBeenCalledWith(
+      expect(vi.mocked(fs).writeFile).toHaveBeenCalledWith(
         expect.stringContaining('patients.json'),
         JSON.stringify(mockPatients, null, 2)
       )
     })
   })
 })
+

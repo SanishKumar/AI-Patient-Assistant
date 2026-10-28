@@ -1,15 +1,18 @@
-const { withSentryConfig } = require('@sentry/nextjs');
+import type { NextConfig } from 'next'
 
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ['fs']
-  }
+const config: NextConfig = {
+  poweredByHeader: false,
+  async headers() {
+    return [{
+      source: '/(.*)',
+      headers: [
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'X-Frame-Options', value: 'DENY' },
+        { key: 'Referrer-Policy', value: 'no-referrer' },
+        { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+      ],
+    }]
+  },
 }
 
-const sentryWebpackPluginOptions = {
-  silent: !process.env.CI,
-  disableLogger: true,
-}
-
-module.exports = withSentryConfig(nextConfig, sentryWebpackPluginOptions)
+export default config

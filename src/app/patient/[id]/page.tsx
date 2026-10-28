@@ -3,13 +3,13 @@ import { ChatInterface } from '@/components/ChatInterface'
 import { notFound } from 'next/navigation'
 
 interface PatientPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function PatientPage({ params }: PatientPageProps) {
-  const patientId = parseInt(params.id)
+  const patientId = Number((await params).id)
   const patient = await getPatient(patientId)
   const appointments = await getPatientAppointments(patientId)
 
@@ -134,7 +134,7 @@ export default async function PatientPage({ params }: PatientPageProps) {
             <div className="card-header">
               <h3 className="card-title">AI Assistant</h3>
               <p className="card-description">
-                Ask questions about {patient.name}'s medical history, medications, or health concerns
+                Ask questions about {patient.name}&apos;s medical history, medications, or health concerns
               </p>
             </div>
             <div className="card-content p-0">
@@ -146,3 +146,4 @@ export default async function PatientPage({ params }: PatientPageProps) {
     </div>
   )
 }
+

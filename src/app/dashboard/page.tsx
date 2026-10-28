@@ -42,7 +42,7 @@ export default async function Dashboard() {
 
         <div className="card">
           <div className="card-header pb-3">
-            <h3 className="card-title">Today's Appointments</h3>
+            <h3 className="card-title">Today&apos;s Appointments</h3>
             <p className="card-description">Scheduled for today</p>
           </div>
           <div className="card-content">
@@ -103,3 +103,4 @@ export default async function Dashboard() {
     </div>
   )
 }
+
