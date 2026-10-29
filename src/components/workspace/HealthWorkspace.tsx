@@ -21,12 +21,7 @@ import {
   ShieldCheck,
   X,
 } from 'lucide-react'
-import {
-  demoPatient,
-  initialRecords,
-  sampleImport,
-  suggestedQuestions,
-} from '@/lib/records/fixtures'
+import { demoPatient, sampleImport, suggestedQuestions } from '@/lib/records/fixtures'
 import {
   buildVisitBrief,
   findConflicts,
@@ -35,6 +30,7 @@ import {
   searchRecords,
 } from '@/lib/records/selectors'
 import type { SavedWorkspace } from '@/lib/server/workspaces'
+import { workspaceRecords } from '@/lib/records/demo-session'
 import { type HealthRecord, type Metric } from '@/lib/records/types'
 import { SourceViewer } from './SourceViewer'
 import { OverviewView } from './OverviewView'
@@ -43,6 +39,7 @@ import { RecordTimeline, recordIcons } from './RecordTimeline'
 import { WorkspaceDialog } from './WorkspaceDialog'
 import { AccountDialog } from './AccountDialog'
 import { useWorkspaceState } from './useWorkspaceState'
+import { RecordImportDialog } from './RecordImportDialog'
 
 type View = 'overview' | 'timeline' | 'records' | 'visit'
 const navigation = [
@@ -70,18 +67,24 @@ export function HealthWorkspace({
   const [source, setSource] = useState<{ id: string; line?: number }>()
   const [metric, setMetric] = useState<Metric>('hba1c')
   const [since, setSince] = useState('2026-04-22')
-  const [asOf, setAsOf] = useState(demoPatient.referenceDate)
+  const [asOf, setAsOf] = useState('latest')
   const [filter, setFilter] = useState('all')
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [fileImportOpen, setFileImportOpen] = useState(false)
   const [reviewOpen, setReviewOpen] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [question, setQuestion] = useState('')
   const [notice, setNotice] = useState('')
-  const allRecords = session.imported ? [...initialRecords, sampleImport] : initialRecords
-  const records = recordsAsOf(allRecords, view === 'timeline' ? asOf : demoPatient.referenceDate)
+  const allRecords = workspaceRecords(session)
+  const latestDate = allRecords.reduce(
+    (date, record) => (record.recordedAt > date ? record.recordedAt : date),
+    demoPatient.referenceDate,
+  )
+  const snapshotDate = asOf === 'latest' ? latestDate : asOf
+  const records = recordsAsOf(allRecords, view === 'timeline' ? snapshotDate : latestDate)
   const conflicts = findConflicts(allRecords)
   const sourceRecord = allRecords.find((record) => record.id === source?.id)
   const isFlagged = session.reviews.some((event) => event.action === 'flagged-for-visit')
@@ -279,9 +282,14 @@ export function HealthWorkspace({
                       : 'Bring the important changes, open questions, and their evidence.'}
               </p>
             </div>
-            <button className="button button-primary" onClick={() => setImportOpen(true)}>
-              <Plus size={17} /> Add sample record
-            </button>
+            <div className="heading-actions">
+              <button className="button button-outline" onClick={() => setImportOpen(true)}>
+                <Plus size={17} /> Add sample record
+              </button>
+              <button className="button button-primary" onClick={() => setFileImportOpen(true)}>
+                <Plus size={17} /> Import a record
+              </button>
+            </div>
           </div>
           {viewer && (
             <div className={`save-status ${sync}`} role="status">
@@ -310,13 +318,13 @@ export function HealthWorkspace({
             <div className="context-divider" />
             <div className="context-detail">
               <span>RECORD WINDOW</span>
-              <strong>Jan – Oct 2026</strong>
+              <strong>{allRecords.length} source records</strong>
             </div>
             <div className="context-status">
               <ShieldCheck size={16} />
               <span>Source-linked records</span>
             </div>
-            <span className="context-date">As of 28 Oct 2026</span>
+            <span className="context-date">As of {formatDate(latestDate, true)}</span>
           </div>
 
           {view === 'overview' && (
@@ -349,7 +357,8 @@ export function HealthWorkspace({
                     onChange={(event) => setAsOf(event.target.value)}
                     aria-label="Historical snapshot"
                   >
-                    <option value="2026-10-28">28 Oct 2026 · latest</option>
+                    <option value="latest">{formatDate(latestDate, true)} · latest</option>
+                    <option value="2026-10-28">28 Oct 2026</option>
                     <option value="2026-09-03">3 Sep 2026</option>
                     <option value="2026-08-31">31 Aug 2026</option>
                     <option value="2026-04-22">22 Apr 2026</option>
@@ -360,7 +369,7 @@ export function HealthWorkspace({
               <div className="snapshot-strip">
                 <History size={17} />
                 <span>
-                  <strong>{records.length} records</strong> available by {formatDate(asOf)}.{' '}
+                  <strong>{records.length} records</strong> available by {formatDate(snapshotDate)}.{' '}
                   {findConflicts(records).length
                     ? 'An allergy disagreement is visible in this snapshot.'
                     : 'No allergy disagreement was yet visible in this snapshot.'}
@@ -483,7 +492,29 @@ export function HealthWorkspace({
           </>
         )}
       </div>
-      <AccountDialog open={accountOpen} onClose={() => setAccountOpen(false)} viewer={viewer} />
+      <AccountDialog
+        open={accountOpen}
+        onClose={() => setAccountOpen(false)}
+        viewer={viewer}
+        onErase={() => {
+          dispatch({ type: 'erase' })
+          setAccountOpen(false)
+          setAsOf('latest')
+          setNotice('Deleting saved workspace data…')
+        }}
+      />
+      <RecordImportDialog
+        open={fileImportOpen}
+        onClose={() => setFileImportOpen(false)}
+        records={allRecords}
+        onImport={(record) => {
+          dispatch({ type: 'import-file', record })
+          setNotice(
+            viewer ? 'Saving the imported report…' : 'Report added with its original source.',
+          )
+          setAsOf('latest')
+        }}
+      />
 
       <WorkspaceDialog
         open={menuOpen}
@@ -702,9 +733,14 @@ export function HealthWorkspace({
           <button
             className="button button-outline"
             onClick={() => {
+              if (viewer) {
+                setAboutOpen(false)
+                setAccountOpen(true)
+                return
+              }
               dispatch({ type: 'reset' })
               setAboutOpen(false)
-              setAsOf(demoPatient.referenceDate)
+              setAsOf('latest')
               setNotice(
                 viewer
                   ? 'Resetting your saved fictional workspace…'
@@ -712,7 +748,7 @@ export function HealthWorkspace({
               )
             }}
           >
-            Reset sample workspace
+            {viewer ? 'Manage saved workspace data' : 'Reset sample workspace'}
           </button>
         </div>
       </WorkspaceDialog>

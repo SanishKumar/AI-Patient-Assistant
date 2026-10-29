@@ -72,9 +72,18 @@ export function useWorkspaceState(saved?: SavedWorkspace, ownerId?: string) {
                 text: action.question.text,
                 sourceIds: action.question.sourceIds,
               }
-            : action.type === 'review'
-              ? { type: action.type, action: action.event.action }
-              : action
+            : action.type === 'import-file'
+              ? {
+                  type: action.type,
+                  name: action.record.source.label,
+                  content: action.record.source.importedCsv!.text,
+                  fictional: true,
+                }
+              : action.type === 'erase'
+                ? { type: action.type, confirmation: 'DELETE' }
+                : action.type === 'review'
+                  ? { type: action.type, action: action.event.action }
+                  : action
         const response = await fetch('/api/workspace', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Workspace-Owner': ownerId! },
@@ -91,13 +100,16 @@ export function useWorkspaceState(saved?: SavedWorkspace, ownerId?: string) {
           )
           return
         }
-        if ([400, 401, 403].includes(response.status)) {
+        if ([400, 401, 403, 413, 422].includes(response.status)) {
           queue.current = []
           setSync('error')
+          const details = await response.json().catch(() => null)
           setSyncError(
             response.status === 401
               ? 'Your session ended. Reload and sign in again to save changes.'
-              : 'This change was not saved. Reload the workspace and try again.',
+              : response.status === 422
+                ? (details?.error ?? 'This change did not pass validation.')
+                : 'This change was not saved. Reload the workspace and try again.',
           )
           return
         }

@@ -2845,3 +2845,358 @@ select {
     padding: 9px;
   }
 }
+
+.heading-actions {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.page-heading {
+  flex-wrap: wrap;
+}
+.import-steps {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  gap: 24px;
+  margin: 0 0 26px;
+  border-bottom: 1px solid #e5d8ee;
+  padding-bottom: 18px;
+}
+.import-steps li {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  font: 500 18px var(--font-display);
+  color: #796486;
+}
+.import-steps li span {
+  font:
+    500 11px 'Manrope Variable',
+    sans-serif;
+}
+.import-steps .complete {
+  color: #67417c;
+}
+.import-picker {
+  text-align: center;
+  padding: 24px 20px;
+  border: 1px dashed #c9aedb;
+  border-radius: 18px;
+  background: radial-gradient(ellipse at 50% 0%, #eadbf5, transparent 65%), #f9f3fc;
+}
+.import-picker > svg {
+  margin: 0 auto 17px;
+  color: #75498d;
+}
+.import-picker h3 {
+  font: 500 25px var(--font-display);
+  color: #4c2e5e;
+}
+.import-picker p {
+  color: #6a5178;
+  line-height: 1.9;
+  font-size: 12px;
+  margin: 12px 0 20px;
+}
+.file-picker {
+  display: block;
+  position: relative;
+  width: fit-content;
+  background: #513366;
+  color: white;
+  border-radius: 10px;
+  padding: 13px 25px;
+  margin: 20px auto;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+}
+.file-picker input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+.file-picker:focus-within {
+  outline: 2px solid #754c90;
+  outline-offset: 4px;
+}
+.import-picker .text-link {
+  margin: 0 auto;
+}
+.import-picker p.import-local-note {
+  max-width: 490px;
+  margin: 22px auto 0;
+  font-size: 11px;
+}
+.import-errors {
+  background: #fff0e9;
+  border: 1px solid #edc7ba;
+  padding: 18px 20px;
+  border-radius: 14px;
+  margin-top: 20px;
+  color: #843f40;
+}
+.import-errors h3 {
+  font: 500 19px var(--font-display);
+  margin-bottom: 8px;
+}
+.import-errors ul {
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.import-file-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 24px;
+}
+.import-file-heading > div {
+  flex: 1;
+  min-width: 0;
+}
+.import-file-heading h3 {
+  font: 500 20px var(--font-display);
+  color: #4e315f;
+  overflow-wrap: anywhere;
+}
+.import-file-heading p {
+  font-size: 11px;
+  color: #725980;
+  margin-top: 5px;
+}
+.import-table-scroll {
+  overflow-x: auto;
+  border: 1px solid #e7d9ee;
+  border-radius: 12px;
+}
+.import-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+  color: #5d3c6d;
+}
+.import-table caption {
+  text-align: left;
+  font-size: 10px;
+  padding: 12px 15px;
+  background: #f3eafa;
+  color: #674a79;
+}
+.import-table td,
+.import-table th {
+  padding: 14px 15px;
+  border-top: 1px solid #e7d9ee;
+  line-height: 1.7;
+}
+.import-table th {
+  font-weight: 600;
+}
+.import-table thead {
+  font-size: 10px;
+  color: #745783;
+}
+.import-raw {
+  margin-top: 18px;
+  border: 1px solid #e7d9ee;
+  border-radius: 10px;
+  color: #69477b;
+  font-size: 12px;
+}
+.import-raw summary {
+  padding: 13px 15px;
+  cursor: pointer;
+}
+.import-raw pre {
+  font:
+    11px/1.9 ui-monospace,
+    monospace;
+  overflow: auto;
+  padding: 0 15px 16px;
+  white-space: pre;
+  max-height: 200px;
+}
+.import-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  color: #654877;
+  line-height: 1.9;
+  padding: 8px 0;
+}
+.import-confirm input {
+  width: 17px;
+  height: 17px;
+  accent-color: #67417c;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+.import-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 22px;
+  flex-wrap: wrap;
+}
+.import-feedback {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #68447d;
+  font-size: 12px;
+  line-height: 1.8;
+  background: #f0e5f8;
+  border-radius: 10px;
+  padding: 14px;
+}
+.source-integrity {
+  border-top: 1px solid #e3d6eb;
+  margin-top: 22px;
+  padding-top: 18px;
+}
+.source-integrity h4 {
+  font-size: 11px;
+  color: #644477;
+  font-weight: 600;
+}
+.source-integrity code {
+  display: block;
+  font-size: 10px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+  color: #745884;
+  background: #f1e8f7;
+  padding: 10px;
+  border-radius: 7px;
+  margin: 10px 0;
+}
+.source-integrity p {
+  font-size: 11px;
+  line-height: 1.8;
+  color: #735b7f;
+  margin-bottom: 15px;
+}
+.source-details dd {
+  overflow-wrap: anywhere;
+}
+.paper-footer > span {
+  overflow-wrap: anywhere;
+  max-width: 68%;
+  text-align: right;
+}
+.measurement-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+}
+.map-browse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #efcae7;
+  margin: 13px auto 0;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.account-data-controls {
+  border-top: 1px solid #e3d6eb;
+  padding-top: 22px;
+}
+.account-summary p.account-export-note {
+  font-size: 11px;
+  margin: 12px auto 20px;
+}
+.account-delete {
+  border-top: 1px solid #e3d6eb;
+  margin-top: 23px;
+  padding-top: 23px;
+}
+.account-delete > button {
+  color: #8c404e;
+}
+.account-delete h3 {
+  font-size: 23px;
+}
+.account-delete p {
+  font-size: 12px;
+  line-height: 1.9;
+}
+.account-delete label {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
+  text-align: left;
+  color: #754454;
+}
+.account-delete input {
+  border: 1px solid #d8b5bf;
+  border-radius: 9px;
+  padding: 11px 13px;
+  background: #fff;
+  color: #74364b;
+}
+.button-danger {
+  background: #873e51;
+  color: #fff;
+  border: 1px solid #873e51;
+}
+.button-danger:hover:not(:disabled) {
+  background: #6c2c3c;
+}
+@media (max-width: 700px) {
+  .heading-actions {
+    gap: 8px;
+  }
+  .import-steps {
+    gap: 13px;
+    justify-content: space-between;
+  }
+  .import-steps li {
+    font-size: 15px;
+    gap: 5px;
+  }
+  .import-steps li span {
+    font-size: 9px;
+  }
+  .import-picker {
+    padding: 25px 15px;
+  }
+  .import-picker h3 {
+    font-size: 23px;
+  }
+  .import-file-heading {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .import-file-heading h3 {
+    font-size: 18px;
+  }
+  .import-table {
+    min-width: 0;
+    font-size: 11px;
+  }
+  .import-footer .button {
+    flex: 1;
+  }
+  .import-confirm {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 700px) {
+  .import-table td,
+  .import-table th {
+    padding: 12px 7px;
+    overflow-wrap: anywhere;
+  }
+}

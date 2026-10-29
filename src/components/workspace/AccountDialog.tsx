@@ -1,22 +1,46 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowRight, LockKeyhole, LogOut } from 'lucide-react'
+import { ArrowRight, Download, LockKeyhole, LogOut, Trash2 } from 'lucide-react'
 import { authClient } from '@/lib/auth-client'
 import { WorkspaceDialog } from './WorkspaceDialog'
+import { downloadText } from './downloads'
 
 export function AccountDialog({
   open,
   onClose,
   viewer,
+  onErase,
 }: {
   open: boolean
   onClose: () => void
-  viewer?: { name: string; email: string }
+  viewer?: { id: string; name: string; email: string }
+  onErase: () => void
 }) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signup')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [confirmation, setConfirmation] = useState('')
+  const [exporting, setExporting] = useState(false)
+  async function exportSaved() {
+    setExporting(true)
+    setError('')
+    try {
+      const response = await fetch('/api/workspace/export', {
+        headers: { 'X-Workspace-Owner': viewer!.id },
+        cache: 'no-store',
+      })
+      if (!response.ok) throw new Error('Export failed')
+      downloadText(await response.text(), 'aether-workspace.json')
+    } catch {
+      setError(
+        'Could not export this workspace. Check your connection and sign-in, then try again.',
+      )
+    } finally {
+      setExporting(false)
+    }
+  }
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
@@ -63,7 +87,11 @@ export function AccountDialog({
     <WorkspaceDialog
       open={open}
       onClose={() => {
-        if (!busy) onClose()
+        if (!busy && !exporting) {
+          setDeleteOpen(false)
+          setConfirmation('')
+          onClose()
+        }
       }}
       title={
         viewer
@@ -85,9 +113,83 @@ export function AccountDialog({
             Your sample records, questions, and review progress are saved to this account on this
             local server.
           </p>
-          <button className="button button-outline" disabled={busy} onClick={signOut}>
-            <LogOut size={16} /> {busy ? 'Signing out…' : 'Sign out'}
-          </button>
+          <div className="account-data-controls">
+            <button
+              className="button button-primary"
+              disabled={busy || exporting}
+              onClick={exportSaved}
+            >
+              <Download size={16} />
+              {exporting ? 'Preparing export…' : 'Export workspace data'}
+            </button>
+            <p className="account-export-note">
+              Includes original imported files, source references, questions, and workspace
+              activity. Exported files are yours to keep or delete.
+            </p>
+            <button
+              className="button button-outline"
+              disabled={busy || exporting}
+              onClick={signOut}
+            >
+              <LogOut size={16} /> {busy ? 'Signing out…' : 'Sign out'}
+            </button>
+          </div>
+          <div className="account-delete">
+            {!deleteOpen ? (
+              <button
+                className="text-link"
+                disabled={busy || exporting}
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 size={14} /> Delete saved workspace data
+              </button>
+            ) : (
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  if (confirmation !== 'DELETE') return
+                  setDeleteOpen(false)
+                  setConfirmation('')
+                  onErase()
+                }}
+              >
+                <h3>Delete your saved workspace data?</h3>
+                <p>
+                  Removes imported files, questions, review progress, and previous workspace
+                  activity. Your account and bundled fictional records remain. Downloaded copies are
+                  not deleted.
+                </p>
+                <label>
+                  Type DELETE to confirm
+                  <input
+                    value={confirmation}
+                    onChange={(event) => setConfirmation(event.target.value)}
+                    autoComplete="off"
+                    required
+                    pattern="DELETE"
+                  />
+                </label>
+                <div className="import-footer">
+                  <button
+                    type="button"
+                    className="button button-outline"
+                    onClick={() => {
+                      setDeleteOpen(false)
+                      setConfirmation('')
+                    }}
+                  >
+                    Keep my data
+                  </button>
+                  <button
+                    className="button button-danger"
+                    disabled={confirmation !== 'DELETE' || busy || exporting}
+                  >
+                    Delete workspace data
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       ) : (
         <form className="account-form" onSubmit={submit}>

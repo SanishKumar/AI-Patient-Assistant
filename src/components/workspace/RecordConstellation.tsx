@@ -18,11 +18,13 @@ const icons = { lab: FlaskConical, visit: FileText, prescription: Pill }
 export function RecordConstellation({
   records,
   onSource,
+  onBrowse,
 }: {
   records: HealthRecord[]
   onSource: (id: string) => void
+  onBrowse: () => void
 }) {
-  const ordered = [...records].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))
+  const ordered = [...records].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt)).slice(-6)
   return (
     <div
       className="constellation"
@@ -40,7 +42,7 @@ export function RecordConstellation({
             />
           ))}
         </svg>
-        <div className={`map-core ${records.length > 6 ? 'with-import' : ''}`} aria-hidden="true">
+        <div className="map-core" aria-hidden="true">
           <ScanLine size={24} strokeWidth={1.3} />
           <strong>{records.length.toString().padStart(2, '0')}</strong>
           <span>source records</span>
@@ -77,6 +79,11 @@ export function RecordConstellation({
         <span /> Select a source to look closer{' '}
         <span className="map-caption-detail">Lines follow record dates</span>
       </p>
+      {records.length > 6 && (
+        <button className="map-browse" onClick={onBrowse}>
+          Latest 6 shown · View all {records.length} records <ArrowUpRight size={12} />
+        </button>
+      )}
     </div>
   )
 }

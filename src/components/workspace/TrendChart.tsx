@@ -15,7 +15,12 @@ export function TrendChart({
   onSource: (id: string, line?: number) => void
 }) {
   const gradientId = useId().replace(/:/g, '')
-  const points = observationSeries(records, metric)
+  const allPoints = observationSeries(records, metric)
+  const latest = allPoints.at(-1)
+  const compatible = allPoints.filter(
+    (point) => point.unit === latest?.unit && point.method === latest?.method,
+  )
+  const points = compatible.slice(-6)
   if (!points.length)
     return <div className="empty-state">No measurements were available in this snapshot.</div>
   const values = points.map((p) => p.value)
@@ -78,7 +83,7 @@ export function TrendChart({
         ))}
       </svg>
       <div className="measurement-links">
-        {points.map((point) => (
+        {allPoints.map((point) => (
           <button key={point.recordId} onClick={() => onSource(point.recordId, point.line)}>
             <span>
               {point.value} {point.unit}
@@ -92,6 +97,12 @@ export function TrendChart({
         ))}
       </div>
       <p className="chart-caption">
+        {points.length < allPoints.length && (
+          <>
+            Chart: latest {points.length} readings in {latest?.unit}, using {latest?.method}. All
+            readings are linked above.{' '}
+          </>
+        )}
         Recorded values, not a forecast. Lines connect available measurements; gaps contain no
         inferred data.
       </p>

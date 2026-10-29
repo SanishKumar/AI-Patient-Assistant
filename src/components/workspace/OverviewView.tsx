@@ -76,7 +76,11 @@ export function OverviewView({
                 <span>connected records</span>
               </div>
               <div>
-                <strong>03</strong>
+                <strong>
+                  {new Set(allRecords.map((record) => record.provider)).size
+                    .toString()
+                    .padStart(2, '0')}
+                </strong>
                 <span>care providers</span>
               </div>
               <div>
@@ -85,7 +89,11 @@ export function OverviewView({
               </div>
             </div>
           </div>
-          <RecordConstellation records={allRecords} onSource={openSource} />
+          <RecordConstellation
+            records={allRecords}
+            onSource={openSource}
+            onBrowse={() => navigate('records')}
+          />
         </section>
       </div>
       <section className="next-visit-card">
@@ -160,7 +168,7 @@ export function OverviewView({
                   <span>{comparison.latest.unit}</span>
                 </strong>
                 <span className="metric-change">
-                  <ArrowDownRight size={15} />
+                  {comparison.delta < 0 ? <ArrowDownRight size={15} /> : <ArrowUpRight size={15} />}
                   {Math.abs(comparison.delta)}
                   {metric === 'hba1c' ? ' percentage points' : ` ${comparison.latest.unit}`}{' '}
                   {comparison.delta < 0 ? 'lower' : 'higher'}

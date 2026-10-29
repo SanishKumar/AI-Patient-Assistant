@@ -12,11 +12,35 @@ This version is an interactive **synthetic-data preview**. Every patient, provid
 - Inspect conflicting allergy histories without silently replacing either entry.
 - Search and filter the original record text.
 - Add a sample vitals note, keeping its review status visible.
+- Import a fictional lab CSV through a preview, row validation, and explicit confirmation.
+- Inspect the original file and its SHA-256 fingerprint from any imported measurement.
 - Prepare and export a visit brief with questions, source references, and unresolved information.
 
 Guests can explore without an account. Their changes use browser-tab session storage and survive reloads in that tab. A local account opens a separate saved workspace with sample additions, visit questions, and review progress stored on the server. Guest changes are not copied into an account automatically.
 
 Every workspace read and write checks the authenticated session. Writes also check the expected account and revision, so switching accounts or editing from another tab cannot silently overwrite a workspace. Retried requests are idempotent; workspace state and action metadata commit in one transaction. Source verification badges describe the fictional scenario, not real clinical sign-off.
+
+## Import a fictional lab report
+
+Choose **Import a record → Download fictional example** for a working CSV. The supported header is:
+
+```csv
+date,provider,author,metric,value,unit,method
+2026-10-27,Northstar Diagnostics,Laboratory team,hba1c,6.7,%,HPLC
+2026-10-27,Northstar Diagnostics,Laboratory team,ldl,101,mg/dL,Direct assay
+```
+
+Each file describes one report: the date, provider, and author must match across rows. Include one HbA1c (`hba1c`) and/or one LDL (`ldl`) measurement. HbA1c accepts `%` or `mmol/mol`; LDL accepts `mg/dL` or `mmol/L`. Dates use `YYYY-MM-DD`; methods and units must be explicit. The preview accepts UTF-8 CSV files up to 16 KB, at most 50 physical lines, and up to 12 imported reports per workspace. Spreadsheet formulas, multiline fields, invalid dates, duplicate measurements, and partial reports are rejected.
+
+Files are validated in the browser before confirmation, then independently revalidated by the server for signed-in imports. An import remains **unreviewed**. The original decoded UTF-8 text, line endings, source lines, and SHA-256 fingerprint are preserved; identical contents are deduplicated even under a different filename. The fingerprint identifies contents, not source authenticity. New facts receive their arrival date on the server and do not appear in older historical snapshots.
+
+Charts show up to six recent readings with the latest reading's exact units and method. Other readings remain available through source links. No units are silently converted. The file importer does not handle PDFs, OCR, FHIR bundles, patient matching, or clinical interpretation.
+
+## Control saved workspace data
+
+**My account → Export workspace data** downloads JSON containing current records, original imported files, questions, review progress, and action metadata. Authentication credentials and session tokens are excluded. Exports are downloads, not a backup-restore format.
+
+**Delete saved workspace data** requires typing `DELETE`. It removes current imported files, questions, review progress, and previous workspace activity, while preserving the account and bundled fictional records. One deletion receipt and the new revision remain to prevent a stale tab or request retry from restoring deleted content. Downloaded copies and filesystem backups are outside this operation; it is not forensic disk erasure. Account deletion is separate and is not implemented yet.
 
 ## Run locally
 
@@ -50,7 +74,7 @@ npm run build
 npm run test:e2e
 ```
 
-The browser suite exercises desktop and mobile layouts, source anchors, historical visibility, conflict review, sample import, guest/account separation, account isolation, interrupted saves, conflicting writes, export contents, keyboard focus, and automated accessibility checks. Account checks create fictional users on the test server. Automated accessibility checks do not replace a manual accessibility review.
+The browser suite exercises desktop and mobile layouts, source anchors, historical visibility, conflict review, CSV validation and review, exact source downloads, duplicate detection, unit compatibility, guest/account separation, account isolation, interrupted saves, conflicting writes, export/deletion, keyboard focus, and automated accessibility checks. Account checks create fictional users on the test server. Automated accessibility checks do not replace a manual accessibility review.
 
 ## Project structure
 
@@ -63,4 +87,4 @@ The browser suite exercises desktop and mobile layouts, source anchors, historic
 
 The old unauthenticated clinical chat endpoint returns `503` and never calls a model. Numeric patient URLs return `404`; the prototype's file-based patient storage has been retired. `/dashboard` redirects to the workspace.
 
-Real uploads, OCR, model-generated answers, clinician signing, account recovery/deletion, cloud synchronization, sharing, scheduling, and clinical integrations are not implemented in this preview. The activity table records local action metadata; it is not a tamper-evident clinical audit system.
+Real patient data, PDF uploads, OCR, model-generated answers, clinician signing, account recovery/deletion, cloud synchronization, sharing, scheduling, and clinical integrations are not supported in this preview. The activity table records local action metadata; it is not a tamper-evident clinical audit system.

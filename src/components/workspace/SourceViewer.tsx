@@ -4,6 +4,7 @@ import { Check, FileText, Link2, Clock3 } from 'lucide-react'
 import type { HealthRecord } from '@/lib/records/types'
 import { formatDate } from '@/lib/records/selectors'
 import { WorkspaceDialog } from './WorkspaceDialog'
+import { downloadText } from './downloads'
 
 export function SourceViewer({
   record,
@@ -71,7 +72,11 @@ export function SourceViewer({
                   : 'Awaiting source review'}
               </dd>
               <dt>Method</dt>
-              <dd>Bundled synthetic example</dd>
+              <dd>
+                {record.source.importedCsv
+                  ? 'CSV import · original text preserved'
+                  : 'Bundled synthetic example'}
+              </dd>
               <dt>Evidence anchor</dt>
               <dd>
                 <Link2 size={14} />
@@ -79,6 +84,28 @@ export function SourceViewer({
                 {line ? ` · line ${line}` : ''}
               </dd>
             </dl>
+            {record.source.importedCsv && (
+              <div className="source-integrity">
+                <h4>File fingerprint · SHA-256</h4>
+                <code>{record.source.importedCsv.sha256}</code>
+                <p>
+                  This identifies the imported contents. It does not verify their accuracy or
+                  origin.
+                </p>
+                <button
+                  className="text-link"
+                  onClick={() =>
+                    downloadText(
+                      record.source.importedCsv!.text,
+                      record.source.label,
+                      'text/csv;charset=utf-8',
+                    )
+                  }
+                >
+                  Download original CSV
+                </button>
+              </div>
+            )}
             <div className="small-note">
               Verification here is part of the fictional scenario. It is not a real clinician
               signature.
