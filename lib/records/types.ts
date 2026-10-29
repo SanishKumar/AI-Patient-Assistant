@@ -21,7 +21,11 @@ export interface HealthRecord {
   author: string
   status: ReviewStatus
   summary: string
-  source: { label: string; lines: string[] }
+  source: {
+    label: string
+    lines: string[]
+    importedCsv?: { text: string; sha256: string; receivedAt: string }
+  }
   observations: (Observation & { line: number })[]
   allergy?: { substance: string; assertion: 'present' | 'none-known'; line: number }
   medication?: { name: string; instruction: string; line: number }

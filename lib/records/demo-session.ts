@@ -1,13 +1,16 @@
-import type { ReviewEvent, VisitQuestion } from './types'
+import type { HealthRecord, ReviewEvent, VisitQuestion } from './types'
+import { importLabCsv, MAX_IMPORTED_RECORDS } from './import-csv'
+import { initialRecords, sampleImport } from './fixtures'
 
 export interface DemoSession {
   imported: boolean
   questions: VisitQuestion[]
   reviews: ReviewEvent[]
+  records?: HealthRecord[]
 }
 
 export const emptySession: DemoSession = { imported: false, questions: [], reviews: [] }
-const validSources = new Set([
+const bundledSources = [
   'lab-jan',
   'visit-jan',
   'lab-apr',
@@ -15,7 +18,15 @@ const validSources = new Set([
   'visit-aug',
   'lab-oct',
   'visit-oct',
-])
+]
+
+export function workspaceRecords(session: DemoSession) {
+  return [
+    ...initialRecords,
+    ...(session.imported ? [sampleImport] : []),
+    ...(session.records ?? []),
+  ]
+}
 
 export function restoreSession(raw: string | null): DemoSession {
   if (!raw) return emptySession
@@ -28,6 +39,21 @@ export function restoreSession(raw: string | null): DemoSession {
       !Array.isArray(value.reviews)
     )
       return emptySession
+    const records: HealthRecord[] = []
+    if (Array.isArray(value.records))
+      for (const record of value.records.slice(0, MAX_IMPORTED_RECORDS)) {
+        try {
+          const restored = importLabCsv(
+            record.source.label,
+            record.source.importedCsv.text,
+            record.source.importedCsv.receivedAt,
+          )
+          if (!records.some((item) => item.id === restored.id)) records.push(restored)
+        } catch {
+          /* A corrupt import cannot inject derived facts into the workspace. */
+        }
+      }
+    const validSources = new Set([...bundledSources, ...records.map((record) => record.id)])
     const questions: VisitQuestion[] = value.questions
       .slice(0, 20)
       .filter(
@@ -53,7 +79,7 @@ export function restoreSession(raw: string | null): DemoSession {
           typeof event.at === 'string' &&
           Number.isFinite(Date.parse(event.at)),
       )
-    return { imported: value.imported, questions, reviews }
+    return { imported: value.imported, questions, reviews, ...(records.length ? { records } : {}) }
   } catch {
     return emptySession
   }
@@ -62,6 +88,8 @@ export function restoreSession(raw: string | null): DemoSession {
 export type SessionAction =
   | { type: 'restore'; session: DemoSession }
   | { type: 'import' }
+  | { type: 'import-file'; record: HealthRecord }
+  | { type: 'erase' }
   | { type: 'question'; question: VisitQuestion }
   | { type: 'remove-question'; id: string }
   | { type: 'review'; event: ReviewEvent }
@@ -72,9 +100,17 @@ export function sessionReducer(state: DemoSession, action: SessionAction): DemoS
     case 'restore':
       return action.session
     case 'reset':
+    case 'erase':
       return emptySession
     case 'import':
       return { ...state, imported: true }
+    case 'import-file':
+      if (
+        (state.records?.length ?? 0) >= MAX_IMPORTED_RECORDS ||
+        state.records?.some((record) => record.id === action.record.id)
+      )
+        return state
+      return { ...state, records: [...(state.records ?? []), action.record] }
     case 'question': {
       const question = { ...action.question, text: action.question.text.trim() }
       if (
