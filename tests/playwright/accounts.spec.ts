@@ -1,6 +1,7 @@
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
 import AxeBuilder from '@axe-core/playwright'
+import { sampleLabCsv } from '../../lib/records/import-csv'
 
 const origin = 'http://127.0.0.1:3000'
 const password = 'Fictional-preview-4829!'
@@ -122,7 +123,7 @@ test('separates owners and rejects forged identity, bad origins, stale revisions
     ).toBe(400)
     expect(
       (
-        await a.post('/api/workspace', { headers, data: { ...data, padding: 'x'.repeat(9000) } })
+        await a.post('/api/workspace', { headers, data: { ...data, padding: 'x'.repeat(40000) } })
       ).status(),
     ).toBe(413)
     const denial = await a.post('/api/auth/sign-in/email', {
@@ -130,6 +131,35 @@ test('separates owners and rejects forged identity, bad origins, stale revisions
       data: { email: ownerA.email, password: 'Incorrect-password!' },
     })
     expect(denial.status()).toBe(401)
+    expect((await request.get('/api/workspace/export')).status()).toBe(401)
+    const imported = await a.post('/api/workspace', {
+      headers,
+      data: {
+        revision: 1,
+        requestId: randomUUID(),
+        command: {
+          type: 'import-file',
+          name: 'private.csv',
+          content: sampleLabCsv,
+          fictional: true,
+        },
+      },
+    })
+    expect(imported.status()).toBe(200)
+    const exported = await a.get('/api/workspace/export', {
+      headers: { 'X-Workspace-Owner': ownerA.id },
+    })
+    expect(exported.headers()['cache-control']).toBe('no-store')
+    expect((await exported.json()).state.records).toHaveLength(1)
+    expect(
+      (
+        await b.get('/api/workspace/export', { headers: { 'X-Workspace-Owner': ownerA.id } })
+      ).status(),
+    ).toBe(403)
+    const other = await b.get('/api/workspace/export', {
+      headers: { 'X-Workspace-Owner': ownerB.id },
+    })
+    expect((await other.json()).state.records).toBeUndefined()
   } finally {
     await a.dispose()
     await b.dispose()

@@ -5,7 +5,9 @@ import {
   commandSchema,
   readWorkspace,
   RevisionConflict,
+  WorkspaceInputError,
 } from '@/lib/server/workspaces'
+import { ImportValidationError } from '@/lib/records/import-csv'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
     const { done, value } = await reader.read()
     if (done) break
     size += value.byteLength
-    if (size > 8192) {
+    if (size > 32 * 1024) {
       await reader.cancel()
       return Response.json({ error: 'Request too large.' }, { status: 413, headers: noStore })
     }
@@ -72,6 +74,13 @@ export async function POST(request: Request) {
       headers: noStore,
     })
   } catch (error) {
+    if (error instanceof ImportValidationError)
+      return Response.json(
+        { error: error.message, issues: error.issues },
+        { status: 422, headers: noStore },
+      )
+    if (error instanceof WorkspaceInputError)
+      return Response.json({ error: error.message }, { status: 422, headers: noStore })
     if (error instanceof RevisionConflict)
       return Response.json(
         { error: error.message, ...readWorkspace(getDatabase(), userId) },

@@ -9,7 +9,9 @@ import {
   commandSchema,
   readWorkspace,
   RevisionConflict,
+  exportWorkspace,
 } from '../../lib/server/workspaces'
+import { sampleLabCsv } from '../../lib/records/import-csv'
 
 const schema = readFileSync(new URL('../../migrations/001-workspaces.sql', import.meta.url), 'utf8')
 let db: Database.Database
@@ -24,6 +26,64 @@ beforeEach(() => {
 afterEach(() => db.close())
 
 describe('saved workspaces', () => {
+  it('revalidates imports on the server and keeps their contents scoped to the owner', () => {
+    const data = {
+      revision: 0,
+      requestId: randomUUID(),
+      command: {
+        type: 'import-file' as const,
+        name: 'fictional.csv',
+        content: sampleLabCsv,
+        fictional: true as const,
+      },
+    }
+    const saved = applyWorkspaceCommand(db, 'owner-a', data)
+    expect(saved.state.records?.[0].status).toBe('unreviewed')
+    expect(saved.state.records?.[0].source.importedCsv?.text).toBe(sampleLabCsv)
+    expect(exportWorkspace(db, 'owner-a').records).toHaveLength(7)
+    expect(exportWorkspace(db, 'owner-b').records).toHaveLength(6)
+    expect(JSON.stringify(db.prepare('SELECT * FROM workspace_event').all())).not.toContain(
+      'Northstar',
+    )
+    expect(() =>
+      applyWorkspaceCommand(db, 'owner-a', {
+        ...data,
+        revision: 1,
+        requestId: randomUUID(),
+        command: { ...data.command, content: sampleLabCsv.replace('6.7', 'NaN') },
+      }),
+    ).toThrow()
+    expect(readWorkspace(db, 'owner-a').revision).toBe(1)
+    expect(
+      commandSchema.safeParse({ ...data, command: { ...data.command, status: 'verified' } })
+        .success,
+    ).toBe(false)
+  })
+
+  it('erases owned contents and prior activity without letting a stale tab restore it', () => {
+    const command = {
+      revision: 0,
+      requestId: randomUUID(),
+      command: { type: 'question' as const, text: 'Private fictional question', sourceIds: [] },
+    }
+    applyWorkspaceCommand(db, 'owner-a', command)
+    applyWorkspaceCommand(db, 'owner-b', command)
+    const erase = {
+      revision: 1,
+      requestId: randomUUID(),
+      command: { type: 'erase' as const, confirmation: 'DELETE' as const },
+    }
+    const erased = applyWorkspaceCommand(db, 'owner-a', erase)
+    expect(erased.revision).toBe(2)
+    expect(erased.state.questions).toEqual([])
+    expect(exportWorkspace(db, 'owner-a').activity).toEqual([
+      { kind: 'erase', revision: 2, occurredAt: expect.any(String) },
+    ])
+    expect(readWorkspace(db, 'owner-b').state.questions).toHaveLength(1)
+    expect(() => applyWorkspaceCommand(db, 'owner-a', command)).toThrow(RevisionConflict)
+    expect(applyWorkspaceCommand(db, 'owner-a', erase).revision).toBe(2)
+    expect(commandSchema.safeParse({ ...erase, command: { type: 'erase' } }).success).toBe(false)
+  })
   it('scopes reads, mutations, and replay protection to the authenticated owner', () => {
     const input = { revision: 0, requestId: randomUUID(), command: { type: 'import' as const } }
     const a = applyWorkspaceCommand(db, 'owner-a', input)
