@@ -16,6 +16,7 @@ import { metricLabels, type HealthRecord, type Metric } from '@/lib/records/type
 import type { DemoSession } from '@/lib/records/demo-session'
 import { TrendChart } from './TrendChart'
 import { RecordTimeline } from './RecordTimeline'
+import { RecordConstellation } from './RecordConstellation'
 
 interface OverviewProps {
   allRecords: HealthRecord[]
@@ -50,75 +51,73 @@ export function OverviewView({
     <>
       <div className="overview-grid">
         <section className="story-card">
-          <div className="story-card-top">
-            <span className="eyebrow">THE THREAD BETWEEN YOUR VISITS</span>
-            <span className="story-seal">
-              <Link2 size={17} />
-            </span>
-          </div>
-          <h2>
-            Small details.
-            <br />
-            <em>A more complete picture.</em>
-          </h2>
-          <p>
-            Your records are connected. Start with what changed, then follow the evidence behind it.
-          </p>
-          <button onClick={() => navigate('timeline')} className="story-link">
-            Explore your health timeline <ArrowRight size={17} />
-          </button>
-          <div className="story-orbit" aria-hidden="true">
-            <div />
-            <div />
-            <div />
-            <span className="orbit-dot one" />
-            <span className="orbit-dot two" />
-            <span className="orbit-dot three" />
-          </div>
-          <div className="story-stats">
-            <div>
-              <strong>{allRecords.length.toString().padStart(2, '0')}</strong>
-              <span>connected records</span>
+          <div className="story-copy">
+            <div className="story-card-top">
+              <span className="eyebrow">
+                <span className="live-dot" /> YOUR CONNECTED RECORD
+              </span>
+              <span className="story-edition">01 / OVERVIEW</span>
             </div>
-            <div>
-              <strong>03</strong>
-              <span>care providers</span>
-            </div>
-            <div>
-              <strong>01</strong>
-              <span>detail to reconcile</span>
+            <h2>
+              A clearer view.
+              <br />
+              <em>A little more you.</em>
+            </h2>
+            <p>
+              Bring the pieces of your health story together. Every detail connected to where it
+              began.
+            </p>
+            <button onClick={() => navigate('timeline')} className="story-link">
+              Explore your health timeline <ArrowRight size={17} />
+            </button>
+            <div className="story-stats">
+              <div>
+                <strong>{allRecords.length.toString().padStart(2, '0')}</strong>
+                <span>connected records</span>
+              </div>
+              <div>
+                <strong>03</strong>
+                <span>care providers</span>
+              </div>
+              <div>
+                <strong>01</strong>
+                <span>detail to reconcile</span>
+              </div>
             </div>
           </div>
-        </section>
-        <section className="next-visit-card">
-          <div className="section-kicker">
-            <span className="calendar-tile">
-              <small>NOV</small>02
-            </span>
-            <span className="pill neutral">Next chapter</span>
-          </div>
-          <h2>A more prepared you.</h2>
-          <p>
-            Your sample follow-up with <strong>{demoPatient.clinician}</strong>
-          </p>
-          <div className="visit-location">
-            {demoPatient.clinic}
-            <span>Monday · 10:30 AM IST · Sample appointment</span>
-          </div>
-          <div className="visit-prep-count">
-            <span className="stacked-icons">
-              <FileText size={14} />
-              <MessageSquareText size={14} />
-            </span>
-            {session.questions.length
-              ? `${session.questions.length} questions in your brief`
-              : 'A few good questions go a long way.'}
-          </div>
-          <button className="button button-light full-width" onClick={() => navigate('visit')}>
-            Prepare for your visit <ArrowRight size={16} />
-          </button>
+          <RecordConstellation records={allRecords} onSource={openSource} />
         </section>
       </div>
+      <section className="next-visit-card">
+        <div className="section-kicker">
+          <span className="calendar-tile">
+            <small>NOV</small>02
+          </span>
+        </div>
+        <div className="visit-summary">
+          <span className="eyebrow">YOUR NEXT CHAPTER</span>
+          <h2>Walk in with clarity.</h2>
+          <p>
+            Sample follow-up with <strong>{demoPatient.clinician}</strong>
+          </p>
+        </div>
+        <div className="visit-location">
+          {demoPatient.clinic}
+          <span>Monday · 10:30 AM IST · Sample appointment</span>
+        </div>
+        <div className="visit-prep-count">
+          <span className="stacked-icons">
+            <FileText size={14} />
+            <MessageSquareText size={14} />
+          </span>
+          {session.questions.length
+            ? `${session.questions.length} questions in your brief`
+            : 'A few good questions go a long way.'}
+        </div>
+        <button className="button button-light full-width" onClick={() => navigate('visit')}>
+          Prepare for your visit <ArrowRight size={16} />
+        </button>
+      </section>
       <div className="section-heading">
         <div>
           <h2>Between then and now</h2>

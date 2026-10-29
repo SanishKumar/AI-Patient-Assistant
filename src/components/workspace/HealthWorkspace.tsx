@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useReducer, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   ArrowUpRight,
@@ -34,13 +34,15 @@ import {
   recordsAsOf,
   searchRecords,
 } from '@/lib/records/selectors'
-import { emptySession, restoreSession, sessionReducer } from '@/lib/records/demo-session'
+import type { SavedWorkspace } from '@/lib/server/workspaces'
 import { type HealthRecord, type Metric } from '@/lib/records/types'
 import { SourceViewer } from './SourceViewer'
 import { OverviewView } from './OverviewView'
 import { VisitPreparation } from './VisitPreparation'
 import { RecordTimeline, recordIcons } from './RecordTimeline'
 import { WorkspaceDialog } from './WorkspaceDialog'
+import { AccountDialog } from './AccountDialog'
+import { useWorkspaceState } from './useWorkspaceState'
 
 type View = 'overview' | 'timeline' | 'records' | 'visit'
 const navigation = [
@@ -49,13 +51,22 @@ const navigation = [
   { id: 'records', label: 'Record library', icon: FileText },
   { id: 'visit', label: 'Visit preparation', icon: ListChecks },
 ] as const
-const storageKey = 'aether.synthetic-workspace.v1'
 
-export function HealthWorkspace() {
+export function HealthWorkspace({
+  viewer,
+  saved,
+  accountsEnabled = false,
+}: {
+  viewer?: { id: string; name: string; email: string }
+  saved?: SavedWorkspace
+  accountsEnabled?: boolean
+}) {
   const [view, setView] = useState<View>('overview')
-  const [session, dispatch] = useReducer(sessionReducer, emptySession)
-  const [ready, finishHydration] = useReducer(() => true, false)
-  const [storageWarning, reportStorageWarning] = useReducer(() => true, false)
+  const { session, dispatch, storageWarning, sync, syncError, canRetry, retry } = useWorkspaceState(
+    saved,
+    viewer?.id,
+  )
+  const [accountOpen, setAccountOpen] = useState(false)
   const [source, setSource] = useState<{ id: string; line?: number }>()
   const [metric, setMetric] = useState<Metric>('hba1c')
   const [since, setSince] = useState('2026-04-22')
@@ -75,24 +86,6 @@ export function HealthWorkspace() {
   const sourceRecord = allRecords.find((record) => record.id === source?.id)
   const isFlagged = session.reviews.some((event) => event.action === 'flagged-for-visit')
   const reviewed = session.reviews.some((event) => event.action === 'evidence-reviewed')
-
-  useEffect(() => {
-    try {
-      dispatch({ type: 'restore', session: restoreSession(sessionStorage.getItem(storageKey)) })
-    } catch {
-      reportStorageWarning()
-    }
-    finishHydration()
-  }, [])
-
-  useEffect(() => {
-    if (!ready) return
-    try {
-      sessionStorage.setItem(storageKey, JSON.stringify({ version: 1, ...session }))
-    } catch {
-      reportStorageWarning()
-    }
-  }, [session, ready])
 
   useEffect(() => {
     function handleKey(event: KeyboardEvent) {
@@ -116,6 +109,7 @@ export function HealthWorkspace() {
     setMenuOpen(false)
     setQuery('')
     setFilter('all')
+    window.scrollTo({ top: 0, behavior: 'instant' })
   }
   function openSource(id: string, line?: number) {
     setSource({ id, line })
@@ -130,7 +124,7 @@ export function HealthWorkspace() {
       return
     }
     dispatch({ type: 'question', question: { id: crypto.randomUUID(), text, sourceIds } })
-    setNotice('Question added to your visit brief.')
+    setNotice(viewer ? 'Saving your visit question…' : 'Question added to your visit brief.')
   }
   function flagForVisit() {
     dispatch({
@@ -213,7 +207,8 @@ export function HealthWorkspace() {
           <div className="sidebar-account">
             <span className="avatar-monogram small">AR</span>
             <span>
-              Ananya&apos;s workspace<small>Interactive preview</small>
+              {viewer?.name ?? 'Your space to explore'}
+              <small>{viewer ? 'Saved workspace' : 'Interactive preview'}</small>
             </span>
           </div>
         </div>
@@ -245,7 +240,16 @@ export function HealthWorkspace() {
             <span className="demo-badge">
               <span /> SYNTHETIC DEMO
             </span>
-            <span className="avatar-monogram small topbar-avatar">AR</span>
+            {accountsEnabled && (
+              <button
+                className="account-trigger"
+                disabled={sync === 'saving' || canRetry}
+                onClick={() => setAccountOpen(true)}
+              >
+                <LockKeyhole size={14} />
+                {viewer ? 'My account' : 'Save my space'}
+              </button>
+            )}
           </div>
         </header>
         <main id="workspace-main" className="workspace-main" tabIndex={-1}>
@@ -258,7 +262,7 @@ export function HealthWorkspace() {
               </div>
               <h1>
                 {view === 'overview'
-                  ? 'The whole story. In one place.'
+                  ? 'Your health. More connected.'
                   : view === 'timeline'
                     ? 'Your story, over time.'
                     : view === 'records'
@@ -279,6 +283,22 @@ export function HealthWorkspace() {
               <Plus size={17} /> Add sample record
             </button>
           </div>
+          {viewer && (
+            <div className={`save-status ${sync}`} role="status">
+              <LockKeyhole size={14} />
+              <span>
+                {sync === 'saving'
+                  ? 'Saving changes…'
+                  : sync === 'error'
+                    ? syncError
+                    : 'Saved to your account · fictional workspace'}
+              </span>
+              {canRetry && <button onClick={retry}>Retry save</button>}
+              {sync === 'error' && !canRetry && (
+                <button onClick={() => window.location.reload()}>Reload</button>
+              )}
+            </div>
+          )}
           <div className="patient-context">
             <span className="context-avatar">AR</span>
             <div>
@@ -443,9 +463,11 @@ export function HealthWorkspace() {
             </span>
             <span>
               Synthetic preview ·{' '}
-              {storageWarning
-                ? 'Storage unavailable; changes last until reload'
-                : 'Changes stay in this browser tab'}
+              {viewer
+                ? 'Account workspace · saved on this server'
+                : storageWarning
+                  ? 'Storage unavailable; changes last until reload'
+                  : 'Changes stay in this browser tab'}
               <button onClick={() => setAboutOpen(true)}>
                 About this demo <ArrowUpRight size={12} />
               </button>
@@ -461,6 +483,7 @@ export function HealthWorkspace() {
           </>
         )}
       </div>
+      <AccountDialog open={accountOpen} onClose={() => setAccountOpen(false)} viewer={viewer} />
 
       <WorkspaceDialog
         open={menuOpen}
@@ -556,7 +579,11 @@ export function HealthWorkspace() {
           onClick={() => {
             dispatch({ type: 'import' })
             setImportOpen(false)
-            setNotice('Sample record added. Its source review is still pending.')
+            setNotice(
+              viewer
+                ? 'Saving the sample record…'
+                : 'Sample record added. Its source review is still pending.',
+            )
           }}
         >
           {session.imported ? (
@@ -617,7 +644,11 @@ export function HealthWorkspace() {
                   at: new Date().toISOString(),
                 },
               })
-              setNotice('Evidence marked as read. The allergy disagreement remains open.')
+              setNotice(
+                viewer
+                  ? 'Saving review progress. The allergy disagreement remains open.'
+                  : 'Evidence marked as read. The allergy disagreement remains open.',
+              )
             }}
           >
             {reviewed ? 'Evidence read · still unresolved' : 'Mark evidence as read'}
@@ -663,9 +694,10 @@ export function HealthWorkspace() {
             prescribes, signs a clinical note, or sends data to a model.
           </p>
           <p>
-            Your sample additions and questions stay in this browser tab&apos;s session storage.
-            Avoid real patient information. This is not a shared clinical workspace or a secure
-            patient vault.
+            Guest changes stay in this browser tab. Signed-in changes are saved to a separate
+            account workspace on this server. Account access is checked for every save. Use
+            fictional information only; this preview is not ready for real patient records or
+            clinical use.
           </p>
           <button
             className="button button-outline"
@@ -673,7 +705,11 @@ export function HealthWorkspace() {
               dispatch({ type: 'reset' })
               setAboutOpen(false)
               setAsOf(demoPatient.referenceDate)
-              setNotice('The fictional workspace has been reset.')
+              setNotice(
+                viewer
+                  ? 'Resetting your saved fictional workspace…'
+                  : 'The fictional workspace has been reset.',
+              )
             }}
           >
             Reset sample workspace

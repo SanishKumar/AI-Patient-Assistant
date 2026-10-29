@@ -33,6 +33,17 @@ test('historical snapshots respect when outside records arrived', async ({ page 
   await expect(page.getByRole('button', { name: 'A detail to reconcile' })).toBeVisible()
 })
 
+test('opens the selected original record from the source map', async ({ page }) => {
+  const map = page.getByRole('group', { name: 'Source record map, ordered by visit date' })
+  await expect(map.getByRole('button')).toHaveCount(6)
+  const source = map.getByRole('button', { name: /24 Oct/ })
+  await source.click()
+  await expect(page.getByRole('dialog', { name: 'Follow the evidence' })).toBeVisible()
+  await expect(page.locator('.source-paper')).toContainText('HbA1c: 6.8 %')
+  await page.keyboard.press('Escape')
+  await expect(source).toBeFocused()
+})
+
 test('keeps a conflict open and exports its linked visit question', async ({ page }) => {
   await page.getByRole('button', { name: 'Compare the evidence' }).click()
   await page.getByRole('button', { name: 'Add to visit questions' }).click()
@@ -138,7 +149,7 @@ test('can inspect a conflict source without losing the review context', async ({
 test('restores safely when session storage is damaged', async ({ page }) => {
   await page.evaluate(() => sessionStorage.setItem('aether.synthetic-workspace.v1', '{broken'))
   await page.reload()
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('The whole story. In one place.')
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your health. More connected.')
   await page.getByRole('button', { name: 'Add sample record' }).click()
   await expect(page.getByRole('button', { name: 'Add to the sample workspace' })).toBeEnabled()
 })

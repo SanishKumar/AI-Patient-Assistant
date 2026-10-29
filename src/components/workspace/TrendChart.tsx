@@ -38,13 +38,13 @@ export function TrendChart({
       >
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#4f8a77" stopOpacity=".18" />
-            <stop offset="100%" stopColor="#4f8a77" stopOpacity="0" />
+            <stop offset="0%" stopColor="#a278c1" stopOpacity=".18" />
+            <stop offset="100%" stopColor="#a278c1" stopOpacity="0" />
           </linearGradient>
         </defs>
         {[45, 105, 170].map((y, i) => (
           <g key={y}>
-            <line x1="55" x2="625" y1={y} y2={y} stroke="#e6e9e4" strokeDasharray="3 5" />
+            <line x1="55" x2="625" y1={y} y2={y} stroke="#e7dced" strokeDasharray="3 5" />
             <text x="5" y={y + 4}>
               {(max - (i * (max - min)) / 2).toFixed(metric === 'hba1c' ? 1 : 0)}
             </text>
@@ -56,15 +56,15 @@ export function TrendChart({
             fill={`url(#${gradientId})`}
           />
         )}
-        <path d={path} fill="none" stroke="#387761" strokeWidth="2.5" strokeLinejoin="round" />
+        <path d={path} fill="none" stroke="#895ca6" strokeWidth="2.5" strokeLinejoin="round" />
         {points.map((point, index) => (
           <g key={point.recordId}>
-            <circle cx={xy[index].x} cy={xy[index].y} r="8" fill="#e6efe8" />
+            <circle cx={xy[index].x} cy={xy[index].y} r="8" fill="#f1e3fa" />
             <circle
               cx={xy[index].x}
               cy={xy[index].y}
               r="4"
-              fill="#39755f"
+              fill="#80509d"
               stroke="#fff"
               strokeWidth="1.5"
             />
