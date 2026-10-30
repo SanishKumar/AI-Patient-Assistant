@@ -1,0 +1,48 @@
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      AETHER_DATABASE_PATH: /data/aether.sqlite
+      AETHER_LOCAL_ACCOUNTS: '0'
+    volumes:
+      - records:/data
+    expose:
+      - '3000'
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+    security_opt: [no-new-privileges:true]
+  mail:
+    build: .
+    restart: unless-stopped
+    command: ['node', 'scripts/mail-worker.mjs']
+    env_file: .env.production
+    environment:
+      AETHER_DATABASE_PATH: /data/aether.sqlite
+    volumes:
+      - records:/data
+    depends_on:
+      web:
+        condition: service_healthy
+    security_opt: [no-new-privileges:true]
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    env_file: .env.production
+    ports: ['80:80', '443:443']
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - certificates:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+volumes:
+  records:
+  certificates:
+  caddy_config:

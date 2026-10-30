@@ -1,50 +1,22 @@
 # Aether Health
 
-A connected health record workspace built around one question: what changed, and where did that information come from?
+A personal health record workspace: keep original sources, trace measurements, write a journal, and prepare for a better conversation with your clinician.
 
-This version is an interactive **synthetic-data preview**. Every patient, provider, measurement, document, and appointment in the workspace is fictional. It is not ready for real patient information or clinical use.
+## What works
 
-## Explore the workspace
+- Personal accounts start empty. The fictional demo at `/demo` is completely separate.
+- Import your own supported lab CSVs, review values, and inspect exact source lines and original file fingerprints.
+- Keep self-reported journal entries, dated separately from when you saved them.
+- Search your records, explore historical snapshots, and compare measurements with matching units and methods.
+- Save a visit plan, add questions with optional source links, and download a brief with your actual records and notes.
+- Export workspace data, delete individual records, erase the workspace, or delete the account.
+- Public accounts use email verification and password recovery. Password reset revokes existing sessions.
 
-- Compare recorded measurements and open the exact source line behind each result.
-- Explore a clickable source map ordered by record date.
-- Move through historical snapshots that distinguish event dates from record arrival dates.
-- Inspect conflicting allergy histories without silently replacing either entry.
-- Search and filter the original record text.
-- Add a sample vitals note, keeping its review status visible.
-- Import a fictional lab CSV through a preview, row validation, and explicit confirmation.
-- Inspect the original file and its SHA-256 fingerprint from any imported measurement.
-- Prepare and export a visit brief with questions, source references, and unresolved information.
-
-Guests can explore without an account. Their changes use browser-tab session storage and survive reloads in that tab. A local account opens a separate saved workspace with sample additions, visit questions, and review progress stored on the server. Guest changes are not copied into an account automatically.
-
-Every workspace read and write checks the authenticated session. Writes also check the expected account and revision, so switching accounts or editing from another tab cannot silently overwrite a workspace. Retried requests are idempotent; workspace state and action metadata commit in one transaction. Source verification badges describe the fictional scenario, not real clinical sign-off.
-
-## Import a fictional lab report
-
-Choose **Import a record → Download fictional example** for a working CSV. The supported header is:
-
-```csv
-date,provider,author,metric,value,unit,method
-2026-10-27,Northstar Diagnostics,Laboratory team,hba1c,6.7,%,HPLC
-2026-10-27,Northstar Diagnostics,Laboratory team,ldl,101,mg/dL,Direct assay
-```
-
-Each file describes one report: the date, provider, and author must match across rows. Include one HbA1c (`hba1c`) and/or one LDL (`ldl`) measurement. HbA1c accepts `%` or `mmol/mol`; LDL accepts `mg/dL` or `mmol/L`. Dates use `YYYY-MM-DD`; methods and units must be explicit. The preview accepts UTF-8 CSV files up to 16 KB, at most 50 physical lines, and up to 12 imported reports per workspace. Spreadsheet formulas, multiline fields, invalid dates, duplicate measurements, and partial reports are rejected.
-
-Files are validated in the browser before confirmation, then independently revalidated by the server for signed-in imports. An import remains **unreviewed**. The original decoded UTF-8 text, line endings, source lines, and SHA-256 fingerprint are preserved; identical contents are deduplicated even under a different filename. The fingerprint identifies contents, not source authenticity. New facts receive their arrival date on the server and do not appear in older historical snapshots.
-
-Charts show up to six recent readings with the latest reading's exact units and method. Other readings remain available through source links. No units are silently converted. The file importer does not handle PDFs, OCR, FHIR bundles, patient matching, or clinical interpretation.
-
-## Control saved workspace data
-
-**My account → Export workspace data** downloads JSON containing current records, original imported files, questions, review progress, and action metadata. Authentication credentials and session tokens are excluded. Exports are downloads, not a backup-restore format.
-
-**Delete saved workspace data** requires typing `DELETE`. It removes current imported files, questions, review progress, and previous workspace activity, while preserving the account and bundled fictional records. One deletion receipt and the new revision remain to prevent a stale tab or request retry from restoring deleted content. Downloaded copies and filesystem backups are outside this operation; it is not forensic disk erasure. Account deletion is separate and is not implemented yet.
+The product organizes user-supplied information; it does not diagnose, prescribe, verify clinical accuracy, sign clinician notes, or book appointments. PDF/image uploads, OCR, caregiver sharing, cloud integrations, and model-generated answers are not implemented. The retired clinical chat endpoint remains disabled.
 
 ## Run locally
 
-Use Node.js 22.12 or later; Node.js 24 is recommended for this project.
+Use Node.js 24:
 
 ```sh
 npm ci
@@ -52,39 +24,59 @@ npm run setup:local
 npm run dev
 ```
 
-Open **http://127.0.0.1:3000**. Use this exact origin for local account cookies and save requests. No external service or API key is required. `setup:local` creates a random authentication secret in `.env.local`, initializes Better Auth's tables, and applies the workspace schema to `.data/aether.sqlite`. Rerunning it preserves existing configuration and saved workspaces. Both files are ignored by Git.
-
-Development and production builds use Webpack because the Turbopack CSS worker failed to initialize in the tested Windows environment. Without account configuration, the guest preview remains available.
-
-The local account flow includes email/password registration, sign-in, and sign-out. Passwords require at least 12 characters and are hashed by Better Auth. Signup without email verification requires explicit local-preview configuration and a loopback base URL. Email delivery, verification, and password recovery are not configured. Keep accounts and record content fictional.
-
-SQLite persistence is for a single local server. Do not deploy this configuration to ephemeral or shared hosting, or use it as a patient vault. Public deployment still needs a production data-storage and backup strategy, email verification/recovery, access-policy review, and operational security work. Changing `BETTER_AUTH_URL` alone does not complete that work.
+Open **http://127.0.0.1:3000**. The landing page links to sign-in and the separate demo. Local setup creates private `.env.local` secrets and a SQLite database in `.data/`; rerunning preserves existing data. Local account verification is intentionally bypassed on loopback only. Use test information in development. Email recovery requires a configured SMTP service and running mail worker.
 
 ```sh
 npm run check
 npm run build
 npm run start
-```
-
-## Browser checks
-
-```sh
-npx playwright install chromium
-npm run build
 npm run test:e2e
 ```
 
-The browser suite exercises desktop and mobile layouts, source anchors, historical visibility, conflict review, CSV validation and review, exact source downloads, duplicate detection, unit compatibility, guest/account separation, account isolation, interrupted saves, conflicting writes, export/deletion, keyboard focus, and automated accessibility checks. Account checks create fictional users on the test server. Automated accessibility checks do not replace a manual accessibility review.
+Playwright needs Chromium (`npx playwright install chromium`). The suite covers desktop/mobile journeys, source anchors, demo separation, account isolation, interrupted and conflicting saves, export/deletion, and accessibility checks. Unit and integration tests exercise authenticated encryption, rollback, email verification, one-time reset links, session revocation, and mail retries. CI also builds and starts the deployment container. Automated checks do not establish clinical suitability or certify a deployment.
 
-## Project structure
+## Self-host
 
-- `lib/records`: typed source records, synthetic fixtures, historical projections, comparisons, and demo-session transitions.
-- `lib/server`: session configuration, database access, and account-scoped workspace commands.
-- `migrations`: the workspace schema, applied by `scripts/setup-local.mjs` alongside Better Auth's migrations.
-- `src/components/workspace`: overview, timeline, source viewer, record library, and visit preparation.
-- `tests/lib`: record integrity and state-transition tests.
-- `tests/playwright`: browser workflows and accessibility checks.
+The repository includes Docker Compose with a web process, a durable email worker, Caddy HTTPS, persistent database storage, startup validation, migrations, and a consistent SQLite backup command. See [the deployment guide](deploy/README.md) for setup, SMTP, data keys, backups, restore rehearsals, and operating limits.
 
-The old unauthenticated clinical chat endpoint returns `503` and never calls a model. Numeric patient URLs return `404`; the prototype's file-based patient storage has been retired. `/dashboard` redirects to the workspace.
+```sh
+npm run setup:deployment -- health.your-domain.com
+# Fill in the SMTP settings in .env.production.
+docker compose up --build -d
+```
 
-Real patient data, PDF uploads, OCR, model-generated answers, clinician signing, account recovery/deletion, cloud synchronization, sharing, scheduling, and clinical integrations are not supported in this preview. The activity table records local action metadata; it is not a tamper-evident clinical audit system.
+This is a single-host deployment. Keep the database on persistent local storage, retain the data key separately, and configure protected off-host backups. Deployment requires your own domain, host, and SMTP provider. Publish operator details and retention terms before inviting users. The included privacy page explains application behavior; it is not a jurisdiction-specific legal policy or compliance certification.
+
+## Supported CSV format
+
+```csv
+date,provider,author,metric,value,unit,method
+2026-10-27,Example Laboratory,Laboratory team,hba1c,6.7,%,HPLC
+2026-10-27,Example Laboratory,Laboratory team,ldl,101,mg/dL,Direct assay
+```
+
+Each file represents one report: the date, provider, and author must match. Include one HbA1c (`hba1c`) and/or LDL (`ldl`) value. HbA1c accepts `%` or `mmol/mol`; LDL accepts `mg/dL` or `mmol/L`. Supply explicit units and methods. Files must be UTF-8, at most 16 KB and 50 physical lines. A workspace holds up to 100 records, including journal entries. Formulas, multiline CSV fields, invalid dates, and duplicate measurements are rejected. Importing the same contents twice does not create another record.
+
+Files are checked in the browser, then independently parsed on the server. An import is always unreviewed. The original decoded text, line endings, SHA-256 fingerprint, and line references stay attached. The fingerprint identifies contents, not authenticity. Charts plot up to six recent readings with matching units and methods; other readings remain accessible as sources. No units are silently converted. Import does not establish patient identity or clinical accuracy; the owner confirms that each file belongs to them.
+
+## Storage and ownership
+
+Every private read/write requires a session. Public sessions must have a verified email. Mutations check origin, account identity, expected revision, and a unique request ID. Retried requests are idempotent; state and activity commit together. Conflicts return the current version instead of silently overwriting another tab.
+
+Personal workspace payloads are encrypted using AES-256-GCM, with an owner-bound context and random nonce. The server holds the key, so this is not end-to-end encryption. Account identity and action metadata remain readable to the operator. Queued account email is encrypted and processed with retries. Source text, questions, and mail contents are kept out of action metadata and worker logs.
+
+Account-based synthetic preview data from earlier versions stays in the old tables and is excluded from personal workspaces. Owners can retrieve it in a workspace export under `retiredSyntheticPreview`; workspace erasure and account deletion remove it. Anonymous demo storage remains local to its browser tab.
+
+Workspace erasure removes live content and previous activity but preserves a revision and deletion receipt against stale writes. Deleting a record detaches its question links, preserving question text. Account deletion cascades through owned records and sessions. User downloads and server backups require separate retention/erasure. JSON exports are not an automated restore format. SQLite backups must be paired with the original data key; see the restore procedure before relying on them.
+
+## Structure
+
+- `lib/records`: record contracts, import validation, personal workspace commands, comparisons, visit briefs, and isolated demo fixtures.
+- `lib/server`: authentication, ownership, encrypted storage, and encrypted mail queue.
+- `src/components/workspace`: personal workspace, account flows, and reusable source/timeline components.
+- `migrations`: idempotent application schemas alongside Better Auth migrations.
+- `scripts`: setup, deployment checks, mail worker, migrations, and backup.
+- `deploy`: reverse proxy and operator documentation.
+- `tests`: domain, authentication, persistence, and browser verification.
+
+The legacy numeric patient routes return `404`; `/dashboard` redirects to the product entry point. The old unauthenticated clinical chat endpoint returns `503` without calling a model.

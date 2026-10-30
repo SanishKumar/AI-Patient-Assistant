@@ -30,3 +30,32 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - run: docker build -t aether-check .
+      - name: Start configured container
+        run: |
+          docker run -d --name aether-check -p 127.0.0.1:3100:3000 \
+            -e BETTER_AUTH_URL=https://aether.example.test \
+            -e BETTER_AUTH_SECRET=container-test-secret-with-at-least-32-characters \
+            -e AETHER_DATA_KEY=$(openssl rand -base64 32) \
+            -e AETHER_DATABASE_PATH=/data/aether.sqlite \
+            -e AETHER_PUBLIC_ACCOUNTS=1 \
+            -e SMTP_HOST=mail.example.test -e SMTP_PORT=587 \
+            -e SMTP_USER=test -e SMTP_PASSWORD=test -e SMTP_FROM=test@example.test \
+            aether-check
+      - name: Check health and private route protection
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3100/api/health; then break; fi
+            sleep 2
+          done
+          curl --fail http://127.0.0.1:3100/api/health
+          test "$(curl --silent -o /dev/null -w '%{http_code}' http://127.0.0.1:3100/api/workspace)" = 401
+      - name: Container diagnostics
+        if: failure()
+        run: docker logs aether-check
