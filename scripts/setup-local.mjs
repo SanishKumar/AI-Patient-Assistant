@@ -1,8 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, appendFileSync, writeFileSync } from 'node:fs'
 import { randomBytes } from 'node:crypto'
-import { resolve, dirname } from 'node:path'
-import Database from 'better-sqlite3'
-import { getMigrations } from 'better-auth/db/migration'
+import { resolve } from 'node:path'
 
 const envPath = resolve('.env.local')
 if (!existsSync(envPath)) {
@@ -19,16 +17,12 @@ if (!existsSync(envPath)) {
   )
 }
 process.loadEnvFile(envPath)
-const filename = resolve(process.env.AETHER_DATABASE_PATH || '.data/aether.sqlite')
-mkdirSync(dirname(filename), { recursive: true })
-const db = new Database(filename)
-db.pragma('foreign_keys = ON')
-db.pragma('journal_mode = WAL')
-const migration = await getMigrations({ database: db, rateLimit: { storage: 'database' } })
-await migration.runMigrations()
-const sql = readFileSync(new URL('../migrations/001-workspaces.sql', import.meta.url), 'utf8')
-db.exec(sql)
-db.close()
+if (!process.env.AETHER_DATA_KEY) {
+  const key = randomBytes(32).toString('base64')
+  appendFileSync(envPath, `\nAETHER_DATA_KEY=${key}\n`)
+  process.env.AETHER_DATA_KEY = key
+}
+await import('./migrate.mjs')
 console.log(
-  'Local account storage is ready. Use http://127.0.0.1:3000. Keep all workspace content fictional.',
+  'Local development is ready at http://127.0.0.1:3000. Email verification is bypassed locally; use test data.',
 )
