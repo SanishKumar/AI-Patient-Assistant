@@ -4,7 +4,7 @@ import { bytesToHex } from '@noble/hashes/utils.js'
 import { metricLabels, type HealthRecord, type Metric } from './types'
 
 export const MAX_IMPORT_BYTES = 16 * 1024
-export const MAX_IMPORTED_RECORDS = 12
+export const MAX_IMPORTED_RECORDS = 100
 export const csvHeader = 'date,provider,author,metric,value,unit,method'
 export const sampleLabCsv = `${csvHeader}\n2026-10-27,Northstar Diagnostics,Laboratory team,hba1c,6.7,%,HPLC\n2026-10-27,Northstar Diagnostics,Laboratory team,ldl,101,mg/dL,Direct assay\n`
 

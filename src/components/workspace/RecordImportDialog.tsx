@@ -19,10 +19,12 @@ export function RecordImportDialog({
   onClose,
   records,
   onImport,
+  synthetic = true,
 }: {
   open: boolean
   onClose: () => void
   records: HealthRecord[]
+  synthetic?: boolean
   onImport: (record: HealthRecord) => void
 }) {
   const [draft, setDraft] = useState<HealthRecord>()
@@ -31,8 +33,7 @@ export function RecordImportDialog({
   const [confirmed, setConfirmed] = useState(false)
   const generation = useRef(0)
   const duplicate = draft && records.some((record) => record.id === draft.id)
-  const limitReached =
-    records.filter((record) => record.source.importedCsv).length >= MAX_IMPORTED_RECORDS
+  const limitReached = records.length >= MAX_IMPORTED_RECORDS
   function reset() {
     generation.current++
     setDraft(undefined)
@@ -78,7 +79,11 @@ export function RecordImportDialog({
         onClose()
       }}
       title="Bring another piece of the story."
-      description="Import a fictional lab report. Review every value before it joins the workspace."
+      description={
+        synthetic
+          ? 'Import a fictional lab report. Review every value before it joins the workspace.'
+          : 'Import your lab report. Review every value before saving it.'
+      }
       wide
     >
       <ol className="import-steps" aria-label="Import steps">
@@ -120,8 +125,9 @@ export function RecordImportDialog({
             <Download size={14} /> Download fictional example
           </button>
           <p className="import-local-note">
-            The file is checked in your browser first. It is sent to your local account server only
-            when you confirm the import. Use fictional details only.
+            {synthetic
+              ? 'The file is checked in your browser and stays in this demo tab. Use fictional details only.'
+              : 'The file is checked in your browser first and sent to your account only when you confirm. Import records that belong to you.'}
           </p>
         </div>
       )}
@@ -207,7 +213,7 @@ export function RecordImportDialog({
             </p>
           ) : limitReached ? (
             <p className="form-error">
-              This preview supports up to 12 imported reports. Export or clear the workspace before
+              Keep up to {MAX_IMPORTED_RECORDS} records in this workspace. Remove a record before
               importing another.
             </p>
           ) : (
@@ -217,7 +223,9 @@ export function RecordImportDialog({
                 checked={confirmed}
                 onChange={(event) => setConfirmed(event.target.checked)}
               />{' '}
-              I have reviewed these values and confirm this file contains fictional information.
+              {synthetic
+                ? 'I have reviewed these values and confirm this file contains fictional information.'
+                : 'I have reviewed these values and confirm this record belongs to me.'}
             </label>
           )}
           <div className="import-footer">

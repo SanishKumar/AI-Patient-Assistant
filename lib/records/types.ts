@@ -25,6 +25,7 @@ export interface HealthRecord {
     label: string
     lines: string[]
     importedCsv?: { text: string; sha256: string; receivedAt: string }
+    personalNote?: boolean
   }
   observations: (Observation & { line: number })[]
   allergy?: { substance: string; assertion: 'present' | 'none-known'; line: number }

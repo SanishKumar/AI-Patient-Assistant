@@ -10,9 +10,11 @@ export function SourceViewer({
   record,
   line,
   onClose,
+  synthetic = true,
 }: {
   record?: HealthRecord
   line?: number
+  synthetic?: boolean
   onClose: () => void
 }) {
   return (
@@ -20,7 +22,11 @@ export function SourceViewer({
       open={!!record}
       onClose={onClose}
       title="Follow the evidence"
-      description="The original fictional source and the facts recorded from it, together."
+      description={
+        synthetic
+          ? 'The original fictional source and the facts recorded from it, together.'
+          : 'Your source text, its origin, and the values recorded from it.'
+      }
       wide
     >
       {record && (
@@ -32,7 +38,13 @@ export function SourceViewer({
               </span>
               <span>
                 {record.provider}
-                <small>Fictional source document</small>
+                <small>
+                  {synthetic
+                    ? 'Fictional source document'
+                    : record.source.personalNote
+                      ? 'Your journal entry · self-reported'
+                      : 'Imported source document'}
+                </small>
               </span>
             </div>
             <h3>{record.source.label}</h3>
@@ -47,7 +59,12 @@ export function SourceViewer({
               ))}
             </div>
             <div className="paper-footer">
-              SYNTHETIC RECORD <span>{record.id}</span>
+              {synthetic
+                ? 'SYNTHETIC RECORD'
+                : record.source.personalNote
+                  ? 'PERSONAL JOURNAL'
+                  : 'IMPORTED RECORD'}{' '}
+              <span>{record.id}</span>
             </div>
           </article>
           <aside className="source-details">
@@ -75,7 +92,9 @@ export function SourceViewer({
               <dd>
                 {record.source.importedCsv
                   ? 'CSV import · original text preserved'
-                  : 'Bundled synthetic example'}
+                  : record.source.personalNote
+                    ? 'Written by you · no clinical extraction'
+                    : 'Bundled synthetic example'}
               </dd>
               <dt>Evidence anchor</dt>
               <dd>
@@ -107,8 +126,9 @@ export function SourceViewer({
               </div>
             )}
             <div className="small-note">
-              Verification here is part of the fictional scenario. It is not a real clinician
-              signature.
+              {synthetic
+                ? 'Verification here is part of the fictional scenario. It is not a real clinician signature.'
+                : 'This record has not been verified by a clinician. A journal entry records your own observations.'}
             </div>
           </aside>
         </div>
