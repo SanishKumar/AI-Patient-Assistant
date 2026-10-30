@@ -1,67 +1,46 @@
 import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
-import { z } from 'zod'
-import {
-  emptySession,
-  restoreSession,
-  sessionReducer,
-  workspaceRecords,
-  type DemoSession,
-} from '../records/demo-session'
 import { importLabCsv, MAX_IMPORTED_RECORDS } from '../records/import-csv'
+import { commandSchema, newWorkspace, type PersonalWorkspace } from '../records/workspace'
+import type { HealthRecord } from '../records/types'
+import { seal, unseal } from './vault.mjs'
+import type { z } from 'zod'
 
-const sourceId = z.string().min(1).max(100)
-export const commandSchema = z
-  .object({
-    revision: z.number().int().nonnegative(),
-    requestId: z.string().uuid(),
-    command: z.discriminatedUnion('type', [
-      z.object({ type: z.literal('import') }).strict(),
-      z.object({ type: z.literal('reset') }).strict(),
-      z.object({ type: z.literal('erase'), confirmation: z.literal('DELETE') }).strict(),
-      z
-        .object({
-          type: z.literal('import-file'),
-          name: z.string().min(1).max(120),
-          content: z
-            .string()
-            .min(1)
-            .max(16 * 1024),
-          fictional: z.literal(true),
-        })
-        .strict(),
-      z
-        .object({
-          type: z.literal('question'),
-          text: z.string().trim().min(1).max(240),
-          sourceIds: z.array(sourceId).max(7),
-        })
-        .strict(),
-      z.object({ type: z.literal('remove-question'), id: z.string().uuid() }).strict(),
-      z
-        .object({
-          type: z.literal('review'),
-          action: z.enum(['flagged-for-visit', 'evidence-reviewed']),
-        })
-        .strict(),
-    ]),
-  })
-  .strict()
-
-type WorkspaceRow = { state: string; revision: number }
-export type SavedWorkspace = { state: DemoSession; revision: number }
+export { commandSchema }
+export type SavedWorkspace = { state: PersonalWorkspace; revision: number }
 export class RevisionConflict extends Error {}
 export class WorkspaceInputError extends Error {}
 
+export function allowWorkspaceWrite(db: Database.Database, userId: string, now = Date.now()) {
+  return db
+    .transaction(() => {
+      const row = db
+        .prepare('SELECT window_start, count FROM workspace_rate_limit WHERE user_id = ?')
+        .get(userId) as { window_start: number; count: number } | undefined
+      if (row && now - row.window_start < 60000 && row.count >= 120) return false
+      if (!row || now - row.window_start >= 60000)
+        db.prepare(
+          'INSERT INTO workspace_rate_limit VALUES (?, ?, 1) ON CONFLICT(user_id) DO UPDATE SET window_start=excluded.window_start, count=1',
+        ).run(userId, now)
+      else
+        db.prepare('UPDATE workspace_rate_limit SET count = count + 1 WHERE user_id = ?').run(
+          userId,
+        )
+      return true
+    })
+    .immediate()
+}
+
 export function readWorkspace(db: Database.Database, userId: string): SavedWorkspace {
-  const row = db.prepare('SELECT state, revision FROM workspace WHERE user_id = ?').get(userId) as
-    WorkspaceRow | undefined
-  return row
-    ? {
-        state: restoreSession(JSON.stringify({ ...JSON.parse(row.state), version: 1 })),
-        revision: row.revision,
-      }
-    : { state: emptySession, revision: 0 }
+  const row = db
+    .prepare('SELECT state, revision FROM personal_workspace WHERE user_id = ?')
+    .get(userId) as { state: string; revision: number } | undefined
+  if (!row) return { state: newWorkspace(), revision: 0 }
+  // An unreadable vault must never become an empty writable one.
+  const state = JSON.parse(unseal(row.state, `workspace:${userId}`)) as PersonalWorkspace
+  if (state.version !== 2 || !Array.isArray(state.records) || !Array.isArray(state.questions))
+    throw new Error('Unsupported workspace format')
+  return { state, revision: row.revision }
 }
 
 export function applyWorkspaceCommand(
@@ -69,65 +48,104 @@ export function applyWorkspaceCommand(
   userId: string,
   input: z.infer<typeof commandSchema>,
 ): SavedWorkspace {
+  input = commandSchema.parse(input)
   return db
     .transaction(() => {
       const previous = readWorkspace(db, userId)
-      // A response lost in transit can be retried without duplicating the committed mutation.
       const applied = db
-        .prepare('SELECT 1 FROM workspace_event WHERE user_id = ? AND request_id = ?')
+        .prepare('SELECT 1 FROM personal_workspace_event WHERE user_id = ? AND request_id = ?')
         .get(userId, input.requestId)
       if (applied) return previous
       if (input.revision !== previous.revision)
         throw new RevisionConflict('The workspace changed in another tab.')
       const now = new Date().toISOString()
+      const today = now.slice(0, 10)
       const command = input.command
-      if (command.type === 'question') {
-        const known = new Set(workspaceRecords(previous.state).map((record) => record.id))
-        if (command.sourceIds.some((id) => !known.has(id)))
-          throw new WorkspaceInputError('A linked source is not in this workspace.')
+      let state = previous.state
+      switch (command.type) {
+        case 'import-file': {
+          const record = importLabCsv(command.name, command.content, now)
+          if (state.records.some((item) => item.id === record.id)) break
+          if (state.records.length >= MAX_IMPORTED_RECORDS)
+            throw new WorkspaceInputError(
+              `Keep up to ${MAX_IMPORTED_RECORDS} records per workspace. Remove a record before adding another.`,
+            )
+          state = { ...state, records: [...state.records, record] }
+          break
+        }
+        case 'note': {
+          if (command.note.date > today)
+            throw new WorkspaceInputError('A journal entry cannot be dated in the future.')
+          if (state.records.length >= MAX_IMPORTED_RECORDS)
+            throw new WorkspaceInputError('The record limit has been reached.')
+          const record: HealthRecord = {
+            id: randomUUID(),
+            title: command.note.title,
+            kind: 'visit',
+            occurredAt: command.note.date,
+            recordedAt: today,
+            provider: 'Personal journal',
+            author: 'You',
+            status: 'unreviewed',
+            summary: command.note.text.slice(0, 180),
+            observations: [],
+            source: {
+              label: command.note.title,
+              lines: command.note.text.split('\n'),
+              personalNote: true,
+            },
+          }
+          state = { ...state, records: [...state.records, record] }
+          break
+        }
+        case 'visit':
+          state = { ...state, visit: command.visit }
+          break
+        case 'question': {
+          const known = new Set(state.records.map((record) => record.id))
+          if (command.sourceIds.some((id) => !known.has(id)))
+            throw new WorkspaceInputError('A linked source is not in this workspace.')
+          if (state.questions.some((q) => q.text === command.text)) break
+          if (state.questions.length >= 20)
+            throw new WorkspaceInputError('Remove a question before adding more than 20.')
+          state = {
+            ...state,
+            questions: [
+              ...state.questions,
+              { id: randomUUID(), text: command.text, sourceIds: [...new Set(command.sourceIds)] },
+            ],
+          }
+          break
+        }
+        case 'remove-question':
+          state = { ...state, questions: state.questions.filter((q) => q.id !== command.id) }
+          break
+        case 'remove-record':
+          if (!state.records.some((r) => r.id === command.id))
+            throw new WorkspaceInputError('This record is no longer in your workspace.')
+          state = {
+            ...state,
+            records: state.records.filter((r) => r.id !== command.id),
+            questions: state.questions.map((q) => ({
+              ...q,
+              sourceIds: q.sourceIds.filter((id) => id !== command.id),
+            })),
+          }
+          break
+        case 'erase':
+          state = newWorkspace()
+          db.prepare('DELETE FROM personal_workspace_event WHERE user_id = ?').run(userId)
+          db.prepare('DELETE FROM workspace_event WHERE user_id = ?').run(userId)
+          db.prepare('DELETE FROM workspace WHERE user_id = ?').run(userId)
+          break
       }
-      const record =
-        command.type === 'import-file'
-          ? importLabCsv(command.name, command.content, now)
-          : undefined
-      if (
-        record &&
-        (previous.state.records?.length ?? 0) >= MAX_IMPORTED_RECORDS &&
-        !previous.state.records?.some((item) => item.id === record.id)
-      )
-        throw new WorkspaceInputError(
-          'This preview supports up to 12 imported reports. Export or clear the workspace before adding more.',
-        )
-      const action = record
-        ? { type: 'import-file' as const, record }
-        : command.type === 'question'
-          ? {
-              type: 'question' as const,
-              question: { id: randomUUID(), text: command.text, sourceIds: command.sourceIds },
-            }
-          : command.type === 'review'
-            ? {
-                type: 'review' as const,
-                event: {
-                  id: randomUUID(),
-                  conflictId: 'allergy-history',
-                  action: command.action,
-                  at: now,
-                },
-              }
-            : (command as Exclude<typeof command, { type: 'import-file' }>)
-      const state = sessionReducer(previous.state, action)
       const revision = previous.revision + 1
-      // Keep the revision moving after erasure so an old tab cannot resurrect a stale save.
-      if (command.type === 'erase')
-        db.prepare('DELETE FROM workspace_event WHERE user_id = ?').run(userId)
       db.prepare(
-        `INSERT INTO workspace(user_id, state, revision, updated_at) VALUES (?, ?, ?, ?)
+        `INSERT INTO personal_workspace(user_id, state, revision, updated_at) VALUES (?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET state=excluded.state, revision=excluded.revision, updated_at=excluded.updated_at`,
-      ).run(userId, JSON.stringify(state), revision, now)
-      // Store action metadata, never question text, in the activity ledger.
+      ).run(userId, seal(JSON.stringify(state), `workspace:${userId}`), revision, now)
       db.prepare(
-        'INSERT INTO workspace_event(id, user_id, request_id, kind, revision, occurred_at) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO personal_workspace_event(id, user_id, request_id, kind, revision, occurred_at) VALUES (?, ?, ?, ?, ?, ?)',
       ).run(randomUUID(), userId, input.requestId, command.type, revision, now)
       return { state, revision }
     })
@@ -139,16 +157,18 @@ export function exportWorkspace(db: Database.Database, userId: string) {
     const saved = readWorkspace(db, userId)
     const activity = db
       .prepare(
-        'SELECT kind, revision, occurred_at AS occurredAt FROM workspace_event WHERE user_id = ? ORDER BY revision',
+        'SELECT kind, revision, occurred_at AS occurredAt FROM personal_workspace_event WHERE user_id = ? ORDER BY revision',
       )
       .all(userId)
+    const legacy = db.prepare('SELECT state FROM workspace WHERE user_id = ?').get(userId) as
+      { state: string } | undefined
     return {
-      format: 'aether.workspace-export.v1',
+      format: 'aether.workspace-export.v2',
       exportedAt: new Date().toISOString(),
-      synthetic: true,
       ...saved,
-      records: workspaceRecords(saved.state),
+      records: saved.state.records,
       activity,
+      ...(legacy ? { retiredSyntheticPreview: JSON.parse(legacy.state) } : {}),
     }
   })()
 }

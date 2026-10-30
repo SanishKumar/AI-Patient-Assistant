@@ -1,4 +1,4 @@
-import { authConfigured, getAuth } from '@/lib/server/auth'
+import { workspaceSession } from '@/lib/server/auth'
 import { getDatabase } from '@/lib/server/database'
 import {
   applyWorkspaceCommand,
@@ -6,6 +6,7 @@ import {
   readWorkspace,
   RevisionConflict,
   WorkspaceInputError,
+  allowWorkspaceWrite,
 } from '@/lib/server/workspaces'
 import { ImportValidationError } from '@/lib/records/import-csv'
 
@@ -14,8 +15,7 @@ export const dynamic = 'force-dynamic'
 const noStore = { 'Cache-Control': 'no-store' }
 
 async function identify(request: Request) {
-  if (!authConfigured()) return null
-  return (await getAuth().api.getSession({ headers: request.headers }))?.user.id ?? null
+  return (await workspaceSession(request.headers))?.user.id ?? null
 }
 
 export async function GET(request: Request) {
@@ -42,6 +42,11 @@ export async function POST(request: Request) {
   const allowedOrigin = new URL(process.env.BETTER_AUTH_URL!).origin
   if (origin !== allowedOrigin)
     return Response.json({ error: 'Origin not allowed.' }, { status: 403, headers: noStore })
+  if (!allowWorkspaceWrite(getDatabase(), userId))
+    return Response.json(
+      { error: 'Too many changes. Wait a minute and retry.' },
+      { status: 429, headers: { ...noStore, 'Retry-After': '60' } },
+    )
   if (!request.headers.get('content-type')?.startsWith('application/json'))
     return Response.json({ error: 'JSON required.' }, { status: 415, headers: noStore })
   // Bound the stream rather than trusting a caller-controlled Content-Length header.

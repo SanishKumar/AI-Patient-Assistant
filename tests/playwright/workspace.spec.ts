@@ -9,7 +9,7 @@ async function navigate(page: Page, name: string) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/demo')
 })
 
 test('opens the exact source line and returns focus on escape', async ({ page }) => {

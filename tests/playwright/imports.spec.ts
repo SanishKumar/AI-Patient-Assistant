@@ -22,7 +22,7 @@ async function confirmImport(page: Page) {
 test('validates locally, reviews a file, preserves original source bytes, and prevents duplicate imports', async ({
   page,
 }) => {
-  await page.goto('/')
+  await page.goto('/demo')
   await page.getByRole('button', { name: 'Import a record', exact: true }).click()
   await expect(page.getByRole('dialog')).toHaveCSS('opacity', '1')
   expect(
@@ -76,9 +76,10 @@ test('saves, exports, and deletes imported workspace data without reviving it fr
   })
   expect(signup.status()).toBe(200)
   const owner = (await signup.json()).user.id
-  await page.goto('/')
+  await page.goto('/workspace')
   await preview(page)
-  await confirmImport(page)
+  await page.getByRole('checkbox', { name: /record belongs to me/ }).check()
+  await page.getByRole('button', { name: 'Import reviewed file' }).click()
   await expect(page.locator('.save-status')).toContainText('Saved to your account')
   await page.reload()
   await expect(page.locator('.metric-summary')).toContainText('6.7')
@@ -86,8 +87,8 @@ test('saves, exports, and deletes imported workspace data without reviving it fr
   const download = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Export workspace data' }).click()
   const exported = JSON.parse(await readFile((await (await download).path())!, 'utf8'))
-  expect(exported.format).toBe('aether.workspace-export.v1')
-  expect(exported.records).toHaveLength(7)
+  expect(exported.format).toBe('aether.workspace-export.v2')
+  expect(exported.records).toHaveLength(1)
   expect(exported.state.records[0].source.importedCsv.text).toBe(content)
   expect(exported.activity).toHaveLength(1)
   expect(exported).not.toHaveProperty('session')
@@ -101,7 +102,7 @@ test('saves, exports, and deletes imported workspace data without reviving it fr
   ).toEqual([])
   await page.getByLabel('Type DELETE to confirm').fill('DELETE')
   await page.getByRole('button', { name: 'Delete workspace data', exact: true }).click()
-  await expect(page.locator('.metric-summary')).toContainText('6.8')
+  await expect(page.getByRole('heading', { name: 'No HbA1c readings yet.' })).toBeVisible()
   await expect(page.locator('.save-status')).toContainText('Saved to your account')
   const stale = await context.request.post('/api/workspace', {
     headers: { Origin: 'http://127.0.0.1:3000', 'X-Workspace-Owner': owner },
@@ -117,17 +118,17 @@ test('saves, exports, and deletes imported workspace data without reviving it fr
   })
   expect(after.status()).toBe(200)
   const erased = await after.json()
-  expect(erased.records).toHaveLength(6)
+  expect(erased.records).toHaveLength(0)
   expect(erased.state.questions).toEqual([])
   expect(erased.activity).toMatchObject([{ kind: 'erase' }])
   await page.reload()
-  await expect(page.locator('.metric-summary')).toContainText('6.8')
+  await expect(page.getByRole('heading', { name: 'No HbA1c readings yet.' })).toBeVisible()
 })
 
 test('shows incompatible readings as sources without mixing them into the same chart', async ({
   page,
 }) => {
-  await page.goto('/')
+  await page.goto('/demo')
   await page.getByRole('button', { name: 'Import a record', exact: true }).click()
   await page.getByLabel('Choose CSV file', { exact: true }).setInputFiles({
     ...file,

@@ -6,7 +6,7 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Aether Health — Your connected health story',
   description:
-    'An evidence-linked health record workspace. Explore a synthetic health timeline, compare source records, and prepare for a visit.',
+    'Your personal health record workspace. Organize lab reports, keep a journal, follow original sources, and prepare for your next visit.',
   robots: { index: false, follow: false },
 }
 
