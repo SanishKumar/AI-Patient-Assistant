@@ -1,6 +1,19 @@
 {$AETHER_DOMAIN} {
   header Strict-Transport-Security "max-age=31536000"
-  request_body {
+  @documentUpload {
+    path /api/workspace/documents
+    method POST
+  }
+  @otherRequests {
+    not {
+      path /api/workspace/documents
+      method POST
+    }
+  }
+  request_body @documentUpload {
+    max_size 6MB
+  }
+  request_body @otherRequests {
     max_size 64KB
   }
   reverse_proxy web:3000 {

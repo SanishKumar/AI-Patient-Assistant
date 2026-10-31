@@ -37,6 +37,8 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - run: docker build -t aether-check .
+      - name: Validate reverse proxy configuration
+        run: docker run --rm -e AETHER_DOMAIN=aether.example.test -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: Start configured container
         run: |
           docker run -d --name aether-check -p 127.0.0.1:3100:3000 \
@@ -56,6 +58,21 @@ jobs:
           done
           curl --fail http://127.0.0.1:3100/api/health
           test "$(curl --silent -o /dev/null -w '%{http_code}' http://127.0.0.1:3100/api/workspace)" = 401
+          test "$(curl --silent -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:3100/api/workspace/documents)" = 401
+      - name: Check document parser in the runtime image
+        run: |
+          docker exec aether-check node --input-type=module -e '
+            import { PDFDocument } from "pdf-lib";
+            import { spawnSync } from "node:child_process";
+            import sharp from "sharp";
+            const pdf = await PDFDocument.create();
+            pdf.addPage();
+            const image = await sharp({ create: { width: 20, height: 20, channels: 3, background: "white" } }).png().toBuffer();
+            for (const [type, bytes] of [["application/pdf", await pdf.save()], ["image/png", image]]) {
+              const result = spawnSync(process.execPath, ["scripts/inspect-document.mjs", type], { input: bytes });
+              if (result.status !== 0 || JSON.parse(result.stdout).pages !== 1) process.exit(1);
+            }
+          '
       - name: Container diagnostics
         if: failure()
         run: docker logs aether-check

@@ -6,13 +6,14 @@ A personal health record workspace: keep original sources, trace measurements, w
 
 - Personal accounts start empty. The fictional demo at `/demo` is completely separate.
 - Import your own supported lab CSVs, review values, and inspect exact source lines and original file fingerprints.
+- Upload PDF reports and PNG/JPEG images, browse their pages, download unchanged originals, and enter readings linked to the page you checked.
 - Keep self-reported journal entries, dated separately from when you saved them.
 - Search your records, explore historical snapshots, and compare measurements with matching units and methods.
 - Save a visit plan, add questions with optional source links, and download a brief with your actual records and notes.
 - Export workspace data, delete individual records, erase the workspace, or delete the account.
 - Public accounts use email verification and password recovery. Password reset revokes existing sessions.
 
-The product organizes user-supplied information; it does not diagnose, prescribe, verify clinical accuracy, sign clinician notes, or book appointments. PDF/image uploads, OCR, caregiver sharing, cloud integrations, and model-generated answers are not implemented. The retired clinical chat endpoint remains disabled.
+The product organizes user-supplied information; it does not diagnose, prescribe, verify clinical accuracy, sign clinician notes, or book appointments. OCR, caregiver sharing, cloud integrations, and model-generated answers are not implemented. The retired clinical chat endpoint remains disabled.
 
 ## Run locally
 
@@ -46,6 +47,16 @@ docker compose up --build -d
 ```
 
 This is a single-host deployment. Keep the database on persistent local storage, retain the data key separately, and configure protected off-host backups. Deployment requires your own domain, host, and SMTP provider. Publish operator details and retention terms before inviting users. The included privacy page explains application behavior; it is not a jurisdiction-specific legal policy or compliance certification.
+
+## Original documents
+
+Use **Upload a document** for PDFs, PNGs, and JPEGs up to 5 MiB each. PDFs may contain up to 20 pages; images are limited to 20 megapixels. Password-protected PDFs, forms, scripts, embedded attachments, and animated images are rejected. Validation checks signatures, parses the document, and decodes images in a separate process with a time limit and restricted inherited environment. This is resource-bounded validation, not an antivirus service or an OS sandbox.
+
+Each workspace allows 50 MiB of original files within the shared 100-record limit. Identical file contents cannot be uploaded twice to the same workspace. The original bytes are encrypted separately from workspace metadata and included in SQLite backups. Deleting a record, erasing a workspace, or deleting an account removes its live original files transactionally.
+
+The viewer renders PDF pages locally in the browser; it does not run document scripts or display interactive annotations. You can enter one HbA1c, LDL, and systolic reading per document, each with explicit units, a source page, and a method (or **Not stated**). Confirmation records your review, never clinical verification. Unknown methods are excluded from comparisons. Original bytes remain unchanged. Selectable PDF text is available for reading; scans have no automatic text recognition. Search covers titles, providers, and transcribed readings, not every word inside uploaded files.
+
+Download originals from their viewers. The workspace JSON export contains their metadata, fingerprints, and entered readings, but not the binary files.
 
 ## Supported CSV format
 
