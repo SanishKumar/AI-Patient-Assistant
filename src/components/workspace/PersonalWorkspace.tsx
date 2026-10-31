@@ -25,6 +25,8 @@ import { personalBrief } from '@/lib/records/personal-brief'
 import { type Metric, metricLabels } from '@/lib/records/types'
 import { usePersonalWorkspace } from './usePersonalWorkspace'
 import { RecordImportDialog } from './RecordImportDialog'
+import { DocumentUploadDialog } from './DocumentUploadDialog'
+import { DocumentSourceDialog } from './DocumentSourceDialog'
 import { SourceViewer } from './SourceViewer'
 import { RecordTimeline } from './RecordTimeline'
 import { TrendChart } from './TrendChart'
@@ -48,13 +50,14 @@ export function PersonalWorkspace({
   saved: WorkspaceSnapshot
   local: boolean
 }) {
-  const { state, status, error, send, retry, busy, canRetry } = usePersonalWorkspace(
+  const { state, status, error, send, upload, retry, busy, canRetry } = usePersonalWorkspace(
     saved,
     viewer.id,
   )
   const [tab, setTab] = useState<(typeof tabs)[number]['id']>('overview')
   const [accountOpen, setAccountOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [uploadOpen, setUploadOpen] = useState(false)
   const [noteOpen, setNoteOpen] = useState(false)
   const [noteError, setNoteError] = useState('')
   const [source, setSource] = useState<{ id: string; line?: number }>()
@@ -71,6 +74,7 @@ export function PersonalWorkspace({
   const series = observationSeries(state.records, metric)
   const latest = series.at(-1)
   const openSource = (id: string, line?: number) => setSource({ id, line })
+  const selectedRecord = state.records.find((r) => r.id === source?.id)
   const firstDate =
     [...state.records].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))[0]?.occurredAt ??
     today
@@ -197,6 +201,13 @@ export function PersonalWorkspace({
                   <button
                     className="button button-light"
                     disabled={busy}
+                    onClick={() => setUploadOpen(true)}
+                  >
+                    <FilePlus2 size={17} /> Upload a document
+                  </button>
+                  <button
+                    className="welcome-secondary"
+                    disabled={busy}
                     onClick={() => setImportOpen(true)}
                   >
                     <Plus size={17} /> Import a record
@@ -276,9 +287,8 @@ export function PersonalWorkspace({
                     <FilePlus2 size={32} />
                     <h3>No {metricLabels[metric]} readings yet.</h3>
                     <p>
-                      {metric === 'systolic'
-                        ? 'Blood pressure extraction is not supported yet. You can keep your own observations in the journal.'
-                        : 'Import a supported lab CSV to see measurements and follow each one back to its source.'}
+                      Upload a report and enter a reading beside its source page, or import a
+                      supported lab CSV.
                     </p>
                   </div>
                 )}
@@ -326,6 +336,13 @@ export function PersonalWorkspace({
                 </p>
               </div>
               <div className="heading-actions">
+                <button
+                  className="button button-primary"
+                  disabled={busy}
+                  onClick={() => setUploadOpen(true)}
+                >
+                  <FilePlus2 size={16} /> Upload a document
+                </button>
                 <button
                   className="button button-outline"
                   disabled={busy}
@@ -645,12 +662,40 @@ export function PersonalWorkspace({
           })
         }}
       />
-      <SourceViewer
-        record={state.records.find((r) => r.id === source?.id)}
-        line={source?.line}
-        onClose={() => setSource(undefined)}
-        synthetic={false}
-      />
+      {uploadOpen && (
+        <DocumentUploadDialog
+          onClose={() => {
+            if (status !== 'saving') setUploadOpen(false)
+          }}
+          onUpload={upload}
+          used={state.records.reduce((total, r) => total + (r.source.document?.byteLength ?? 0), 0)}
+          busy={busy}
+          error={error}
+          canRetry={canRetry}
+          retry={retry}
+        />
+      )}
+      {selectedRecord?.source.document ? (
+        <DocumentSourceDialog
+          key={`${selectedRecord.id}:${source?.line ?? 0}`}
+          record={selectedRecord}
+          line={source?.line}
+          owner={viewer.id}
+          onClose={() => setSource(undefined)}
+          send={send}
+          busy={busy}
+          error={error}
+          canRetry={canRetry}
+          retry={retry}
+        />
+      ) : (
+        <SourceViewer
+          record={selectedRecord}
+          line={source?.line}
+          onClose={() => setSource(undefined)}
+          synthetic={false}
+        />
+      )}
       <AccountDialog
         open={accountOpen}
         onClose={() => setAccountOpen(false)}

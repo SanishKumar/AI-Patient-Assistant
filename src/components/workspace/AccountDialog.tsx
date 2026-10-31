@@ -87,7 +87,8 @@ export function AccountDialog({
         <h3>{viewer.name}</h3>
         <p>
           Your records belong to this account. Downloads contain private information; store them
-          somewhere you trust.
+          somewhere you trust. The JSON export includes document details and readings. Download
+          original PDFs and images from their document viewers.
         </p>
         <div className="account-data-controls">
           <button className="button button-primary" disabled={busy} onClick={exportSaved}>

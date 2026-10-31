@@ -11,9 +11,9 @@ export default function PrivacyPage() {
         <h2>What this installation stores</h2>
         <p>
           Your account stores your name, email address, a password hash, and sessions. Your
-          workspace stores the records you import, original CSV text, journal entries, visit
-          details, questions, and action metadata. The separate demo uses fictional content stored
-          in your browser tab.
+          workspace stores the records you import, original CSV text, encrypted PDF/image files,
+          your page-linked readings, journal entries, visit details, questions, and action metadata.
+          The separate demo uses fictional content stored in your browser tab.
         </p>
         <h2>Where it goes</h2>
         <p>
@@ -25,11 +25,12 @@ export default function PrivacyPage() {
         </p>
         <h2>Your controls</h2>
         <p>
-          Open My account to export your workspace, erase its contents, or delete the account.
-          Individual records can be deleted from the record library. Deleting a record removes its
-          links from questions while preserving the question text. Workspace erasure retains a
-          revision and deletion receipt to reject stale writes. Account deletion removes saved
-          workspaces and sessions.
+          Open My account to export your workspace, erase its contents, or delete the account. The
+          JSON export includes document details and readings; download original PDFs and images from
+          each document viewer. Individual records can be deleted from the record library. Deleting
+          a record removes its original file and links from questions while preserving the question
+          text. Workspace erasure retains a revision and deletion receipt to reject stale writes.
+          Account deletion removes saved workspaces and sessions.
         </p>
         <h2>Copies and backups</h2>
         <p>
@@ -40,10 +41,10 @@ export default function PrivacyPage() {
         </p>
         <h2>What records mean</h2>
         <p>
-          Imported values and journal entries are not clinically verified. File fingerprints
-          identify contents, not authenticity. Visit plans are personal notes, not bookings. The app
-          is for organizing information and preparing conversations, and does not provide diagnosis
-          or treatment.
+          Imported values, manually transcribed readings, and journal entries are not clinically
+          verified. File fingerprints identify contents, not authenticity. Visit plans are personal
+          notes, not bookings. The app is for organizing information and preparing conversations,
+          and does not provide diagnosis or treatment.
         </p>
         <h2>For the operator</h2>
         <p>

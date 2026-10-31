@@ -1,6 +1,12 @@
 'use client'
 import { useRef, useState } from 'react'
 import type { WorkspaceCommand, WorkspaceSnapshot } from '@/lib/records/workspace'
+import type { DocumentMetadata } from '@/lib/records/documents'
+
+type Pending = { revision: number; requestId: string } & (
+  | { command: WorkspaceCommand; file?: never; metadata?: never }
+  | { file: File; metadata: DocumentMetadata; command?: never }
+)
 
 export function usePersonalWorkspace(initial: WorkspaceSnapshot, owner: string) {
   const [saved, setSaved] = useState(initial)
@@ -8,9 +14,7 @@ export function usePersonalWorkspace(initial: WorkspaceSnapshot, owner: string) 
   const [status, setStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const [error, setError] = useState('')
   const [canRetry, setCanRetry] = useState(false)
-  const pending = useRef<{ revision: number; requestId: string; command: WorkspaceCommand } | null>(
-    null,
-  )
+  const pending = useRef<Pending | null>(null)
   const running = useRef(false)
   async function flush() {
     if (running.current || !pending.current) return false
@@ -19,10 +23,27 @@ export function usePersonalWorkspace(initial: WorkspaceSnapshot, owner: string) 
     setError('')
     setCanRetry(false)
     try {
-      const response = await fetch('/api/workspace', {
+      const current = pending.current
+      let bodyData: FormData | string
+      if (current.file) {
+        bodyData = new FormData()
+        bodyData.set('file', current.file)
+        bodyData.set(
+          'metadata',
+          JSON.stringify({
+            revision: current.revision,
+            requestId: current.requestId,
+            metadata: current.metadata,
+          }),
+        )
+      } else bodyData = JSON.stringify(current)
+      const response = await fetch(current.file ? '/api/workspace/documents' : '/api/workspace', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Workspace-Owner': owner },
-        body: JSON.stringify(pending.current),
+        headers: {
+          ...(current.file ? {} : { 'Content-Type': 'application/json' }),
+          'X-Workspace-Owner': owner,
+        },
+        body: bodyData,
       })
       const body = await response.json()
       if (response.status === 409) {
@@ -35,10 +56,16 @@ export function usePersonalWorkspace(initial: WorkspaceSnapshot, owner: string) 
         )
         return false
       }
-      if ([400, 401, 403, 413, 422].includes(response.status)) {
+      if ([400, 401, 403, 413, 415, 422].includes(response.status)) {
         pending.current = null
         setStatus('error')
         setError(body.error || 'This change could not be saved. Reload and try again.')
+        return false
+      }
+      if ([429, 503].includes(response.status)) {
+        setStatus('error')
+        setCanRetry(true)
+        setError(body.error || 'The server is busy. Keep this tab open and retry shortly.')
         return false
       }
       if (!response.ok) throw new Error('Save unavailable')
@@ -63,12 +90,23 @@ export function usePersonalWorkspace(initial: WorkspaceSnapshot, owner: string) 
     pending.current = { command, revision: latest.current.revision, requestId: crypto.randomUUID() }
     return flush()
   }
+  async function upload(file: File, metadata: DocumentMetadata) {
+    if (running.current || pending.current) return false
+    pending.current = {
+      file,
+      metadata,
+      revision: latest.current.revision,
+      requestId: crypto.randomUUID(),
+    }
+    return flush()
+  }
   return {
     state: saved.state,
     status,
     error,
     canRetry,
     send,
+    upload,
     retry: flush,
     busy: status === 'saving' || canRetry,
   }
