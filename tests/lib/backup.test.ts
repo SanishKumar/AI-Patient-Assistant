@@ -6,8 +6,10 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve, sep } from 'node:path'
 import { applyWorkspaceCommand, readWorkspace } from '../../lib/server/workspaces'
+import { uploadDocument, readDocument } from '../../lib/server/documents'
+import { PDFDocument } from 'pdf-lib'
 
-it('backs up committed WAL contents and restores an encrypted workspace using the same key', () => {
+it('backs up committed WAL contents and restores encrypted records and originals using the same key', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'aether-backup-test-'))
   const filename = join(folder, 'source.sqlite'),
     backup = join(folder, 'snapshot.sqlite')
@@ -18,12 +20,30 @@ it('backs up committed WAL contents and restores an encrypted workspace using th
     db.pragma('journal_mode = WAL')
     db.pragma('wal_autocheckpoint = 0')
     db.exec("CREATE TABLE user(id TEXT PRIMARY KEY); INSERT INTO user VALUES ('test-owner');")
-    for (const file of ['001-workspaces.sql', '002-personal-workspaces.sql'])
+    for (const file of [
+      '001-workspaces.sql',
+      '002-personal-workspaces.sql',
+      '003-record-documents.sql',
+    ])
       db.exec(readFileSync(new URL(`../../migrations/${file}`, import.meta.url), 'utf8'))
     applyWorkspaceCommand(db, 'test-owner', {
       revision: 0,
       requestId: randomUUID(),
       command: { type: 'question', text: 'A committed question in the WAL', sourceIds: [] },
+    })
+    const pdf = await PDFDocument.create()
+    pdf.addPage().drawText('Fictional backup test report')
+    const original = await pdf.save()
+    const saved = await uploadDocument(db, 'test-owner', 'backup-test.pdf', original, {
+      revision: 1,
+      requestId: randomUUID(),
+      metadata: {
+        title: 'Backup report',
+        provider: 'Test laboratory',
+        date: '2026-01-01',
+        kind: 'lab',
+        belongsToMe: true,
+      },
     })
     execFileSync(process.execPath, ['scripts/backup.mjs', backup], {
       env: { ...process.env, AETHER_DATABASE_PATH: filename },
@@ -38,6 +58,9 @@ it('backs up committed WAL contents and restores an encrypted workspace using th
         state: string
       }
       expect(raw.state).not.toContain('committed question')
+      expect(readDocument(restored, 'test-owner', saved.state.records[0].id)?.bytes).toEqual(
+        Buffer.from(original),
+      )
     } finally {
       restored.close()
     }

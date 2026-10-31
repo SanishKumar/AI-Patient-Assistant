@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import AxeBuilder from '@axe-core/playwright'
 import { sampleLabCsv } from '../../lib/records/import-csv'
+import { PDFDocument } from 'pdf-lib'
 const origin = 'http://127.0.0.1:3000'
 const password = 'Fictional-preview-4829!'
 async function createAccount(request: APIRequestContext) {
@@ -200,6 +201,79 @@ test('separates owners and rejects forged identity, bad origins, stale revisions
         ).json()
       ).state.records,
     ).toEqual([])
+    const pdf = await PDFDocument.create()
+    pdf.addPage()
+    const originalBytes = Buffer.from(await pdf.save())
+    const upload = {
+      metadata: JSON.stringify({
+        revision: 2,
+        requestId: randomUUID(),
+        metadata: {
+          title: 'Private PDF',
+          date: '2026-01-01',
+          provider: 'Test clinic',
+          kind: 'document',
+          belongsToMe: true,
+        },
+      }),
+      file: { name: 'private.pdf', mimeType: 'application/pdf', buffer: originalBytes },
+    }
+    expect(
+      (await request.post('/api/workspace/documents', { headers, multipart: upload })).status(),
+    ).toBe(401)
+    expect(
+      (await b.post('/api/workspace/documents', { headers, multipart: upload })).status(),
+    ).toBe(403)
+    expect(
+      (
+        await a.post('/api/workspace/documents', {
+          headers: { ...headers, Origin: 'https://untrusted.invalid' },
+          multipart: upload,
+        })
+      ).status(),
+    ).toBe(403)
+    expect(
+      (
+        await a.post('/api/workspace/documents', {
+          headers,
+          multipart: { ...upload, file: { ...upload.file, buffer: Buffer.from('%PDF-invalid') } },
+        })
+      ).status(),
+    ).toBe(422)
+    expect(
+      (
+        await a.post('/api/workspace/documents', {
+          headers,
+          multipart: { ...upload, file: { ...upload.file, buffer: Buffer.alloc(6 * 1024 * 1024) } },
+        })
+      ).status(),
+    ).toBe(413)
+    const document = await a.post('/api/workspace/documents', { headers, multipart: upload })
+    expect(document.status()).toBe(200)
+    const id = (await document.json()).state.records.find(
+      (r: { source: { document?: unknown } }) => r.source.document,
+    ).id
+    expect(
+      (await a.post('/api/workspace/documents', { headers, multipart: upload })).status(),
+    ).toBe(200)
+    expect((await request.get(`/api/workspace/documents/${id}`)).status()).toBe(401)
+    expect(
+      (
+        await b.get(`/api/workspace/documents/${id}`, {
+          headers: { 'X-Workspace-Owner': ownerB.id },
+        })
+      ).status(),
+    ).toBe(404)
+    expect(
+      (
+        await b.get(`/api/workspace/documents/${id}`, {
+          headers: { 'X-Workspace-Owner': ownerA.id },
+        })
+      ).status(),
+    ).toBe(403)
+    expect(await (await a.get(`/api/workspace/documents/${id}`, { headers })).body()).toEqual(
+      originalBytes,
+    )
   } finally {
     await a.dispose()
     await b.dispose()

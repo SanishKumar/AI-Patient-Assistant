@@ -29,6 +29,14 @@ export function personalBrief(workspace: PersonalWorkspace, name: string, since:
     ...(changes.length ? changes : ['Not enough comparable measurements.']),
     'Values describe the records. Units and methods are not converted; changes do not establish a cause.',
     '',
+    'RECORDED MEASUREMENTS',
+    ...records.flatMap((record) =>
+      record.observations.map(
+        (reading) =>
+          `${record.occurredAt} · ${reading.label}: ${reading.value} ${reading.unit} · Method: ${reading.method}. Source: ${record.id}, ${reading.page ? `page ${reading.page}` : `line ${reading.line}`}. ${reading.origin === 'user-transcribed' ? 'Entered by you from the original document' : 'Imported from CSV'}; not clinically verified.`,
+      ),
+    ),
+    '',
     'QUESTIONS',
     ...(questions.length
       ? questions.map(

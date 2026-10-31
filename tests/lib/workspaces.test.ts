@@ -22,7 +22,11 @@ beforeEach(() => {
   db.exec(
     "CREATE TABLE user(id TEXT PRIMARY KEY); INSERT INTO user VALUES ('owner-a'), ('owner-b');",
   )
-  for (const file of ['001-workspaces.sql', '002-personal-workspaces.sql'])
+  for (const file of [
+    '001-workspaces.sql',
+    '002-personal-workspaces.sql',
+    '003-record-documents.sql',
+  ])
     db.exec(readFileSync(new URL(`../../migrations/${file}`, import.meta.url), 'utf8'))
 })
 afterEach(() => db.close())

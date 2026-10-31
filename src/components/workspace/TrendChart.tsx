@@ -18,7 +18,12 @@ export function TrendChart({
   const allPoints = observationSeries(records, metric)
   const latest = allPoints.at(-1)
   const compatible = allPoints.filter(
-    (point) => point.unit === latest?.unit && point.method === latest?.method,
+    (point) =>
+      point === latest ||
+      (point.methodKnown !== false &&
+        latest?.methodKnown !== false &&
+        point.unit === latest?.unit &&
+        point.method === latest?.method),
   )
   const points = compatible.slice(-6)
   if (!points.length)

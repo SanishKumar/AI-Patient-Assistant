@@ -61,7 +61,10 @@ export async function POST(request: Request) {
     size += value.byteLength
     if (size > 32 * 1024) {
       await reader.cancel()
-      return Response.json({ error: 'Request too large.' }, { status: 413, headers: noStore })
+      return Response.json(
+        { error: 'Request too large.' },
+        { status: 413, headers: { ...noStore, Connection: 'close' } },
+      )
     }
     chunks.push(value)
   }

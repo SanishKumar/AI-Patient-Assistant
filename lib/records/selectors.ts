@@ -28,7 +28,13 @@ export function compareMetric(records: HealthRecord[], metric: Metric, since: st
   const baseline = baselinePoints[baselinePoints.length - 1]
   if (!latest || !baseline || latest.recordId === baseline.recordId) return null
   // Different units or methods are not directly comparable. Do not silently convert them.
-  if (latest.unit !== baseline.unit || latest.method !== baseline.method) return null
+  if (
+    latest.methodKnown === false ||
+    baseline.methodKnown === false ||
+    latest.unit !== baseline.unit ||
+    latest.method !== baseline.method
+  )
+    return null
   return { baseline, latest, delta: Math.round((latest.value - baseline.value) * 10) / 10 }
 }
 

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { HealthRecord, VisitQuestion } from './types'
 import { validDate } from './import-csv'
+import { documentReviewSchema } from './documents'
 
 const text = (length: number) =>
   z
@@ -41,6 +42,7 @@ export const commandSchema = z
     revision: z.number().int().nonnegative(),
     requestId: z.string().uuid(),
     command: z.discriminatedUnion('type', [
+      documentReviewSchema,
       z
         .object({
           type: z.literal('import-file'),

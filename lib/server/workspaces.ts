@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
 import { importLabCsv, MAX_IMPORTED_RECORDS } from '../records/import-csv'
 import { commandSchema, newWorkspace, type PersonalWorkspace } from '../records/workspace'
-import type { HealthRecord } from '../records/types'
+import { metricLabels, type HealthRecord } from '../records/types'
 import { seal, unseal } from './vault.mjs'
 import type { z } from 'zod'
 
@@ -63,6 +63,42 @@ export function applyWorkspaceCommand(
       const command = input.command
       let state = previous.state
       switch (command.type) {
+        case 'document-review': {
+          const record = state.records.find((r) => r.id === command.id)
+          if (!record?.source.document)
+            throw new WorkspaceInputError('This document is no longer in your workspace.')
+          if (command.readings.some((r) => r.page > record.source.document!.pages))
+            throw new WorkspaceInputError('A reading refers to a page outside this document.')
+          const observations = command.readings.map((reading, i) => ({
+            ...reading,
+            label: metricLabels[reading.metric],
+            line: i + 1,
+            origin: 'user-transcribed' as const,
+          }))
+          const updated: HealthRecord = {
+            ...record,
+            observations,
+            status: 'unreviewed',
+            summary: observations.length
+              ? observations
+                  .map((r) => `${r.label}: ${r.value} ${r.unit} (page ${r.page})`)
+                  .join(' · ')
+              : 'Original document · no readings transcribed.',
+            source: {
+              ...record.source,
+              lines: observations.map(
+                (r) =>
+                  `Page ${r.page} · You entered ${r.label}: ${r.value} ${r.unit} · Method: ${r.method}`,
+              ),
+              document: { ...record.source.document, reviewedAt: now },
+            },
+          }
+          state = {
+            ...state,
+            records: state.records.map((r) => (r.id === record.id ? updated : r)),
+          }
+          break
+        }
         case 'import-file': {
           const record = importLabCsv(command.name, command.content, now)
           if (state.records.some((item) => item.id === record.id)) break
@@ -131,25 +167,50 @@ export function applyWorkspaceCommand(
               sourceIds: q.sourceIds.filter((id) => id !== command.id),
             })),
           }
+          db.prepare('DELETE FROM record_document WHERE user_id = ? AND id = ?').run(
+            userId,
+            command.id,
+          )
           break
         case 'erase':
           state = newWorkspace()
+          db.prepare('DELETE FROM record_document WHERE user_id = ?').run(userId)
           db.prepare('DELETE FROM personal_workspace_event WHERE user_id = ?').run(userId)
           db.prepare('DELETE FROM workspace_event WHERE user_id = ?').run(userId)
           db.prepare('DELETE FROM workspace WHERE user_id = ?').run(userId)
           break
       }
-      const revision = previous.revision + 1
-      db.prepare(
-        `INSERT INTO personal_workspace(user_id, state, revision, updated_at) VALUES (?, ?, ?, ?)
-      ON CONFLICT(user_id) DO UPDATE SET state=excluded.state, revision=excluded.revision, updated_at=excluded.updated_at`,
-      ).run(userId, seal(JSON.stringify(state), `workspace:${userId}`), revision, now)
-      db.prepare(
-        'INSERT INTO personal_workspace_event(id, user_id, request_id, kind, revision, occurred_at) VALUES (?, ?, ?, ?, ?, ?)',
-      ).run(randomUUID(), userId, input.requestId, command.type, revision, now)
-      return { state, revision }
+      return writeWorkspace(
+        db,
+        userId,
+        state,
+        previous.revision + 1,
+        input.requestId,
+        command.type,
+        now,
+      )
     })
     .immediate()
+}
+
+// The caller owns the transaction, including any original-document changes.
+export function writeWorkspace(
+  db: Database.Database,
+  userId: string,
+  state: PersonalWorkspace,
+  revision: number,
+  requestId: string,
+  kind: string,
+  now: string,
+): SavedWorkspace {
+  db.prepare(
+    `INSERT INTO personal_workspace(user_id, state, revision, updated_at) VALUES (?, ?, ?, ?)
+    ON CONFLICT(user_id) DO UPDATE SET state=excluded.state, revision=excluded.revision, updated_at=excluded.updated_at`,
+  ).run(userId, seal(JSON.stringify(state), `workspace:${userId}`), revision, now)
+  db.prepare(
+    'INSERT INTO personal_workspace_event(id, user_id, request_id, kind, revision, occurred_at) VALUES (?, ?, ?, ?, ?, ?)',
+  ).run(randomUUID(), userId, requestId, kind, revision, now)
+  return { state, revision }
 }
 
 export function exportWorkspace(db: Database.Database, userId: string) {

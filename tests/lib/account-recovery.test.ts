@@ -20,7 +20,11 @@ beforeEach(async () => {
   db.pragma('foreign_keys = ON')
   const migration = await getMigrations({ database: db, rateLimit: { storage: 'database' } })
   await migration.runMigrations()
-  for (const file of ['001-workspaces.sql', '002-personal-workspaces.sql'])
+  for (const file of [
+    '001-workspaces.sql',
+    '002-personal-workspaces.sql',
+    '003-record-documents.sql',
+  ])
     db.exec(readFileSync(new URL(`../../migrations/${file}`, import.meta.url), 'utf8'))
 })
 afterEach(() => {

@@ -1,4 +1,4 @@
-export type RecordKind = 'lab' | 'visit' | 'prescription'
+export type RecordKind = 'lab' | 'visit' | 'prescription' | 'document'
 export type ReviewStatus = 'verified' | 'unreviewed'
 export type Metric = 'hba1c' | 'systolic' | 'ldl'
 
@@ -9,6 +9,9 @@ export interface Observation {
   unit: string
   method: string
   reference?: string
+  methodKnown?: boolean
+  origin?: 'user-transcribed'
+  page?: number
 }
 
 export interface HealthRecord {
@@ -26,6 +29,13 @@ export interface HealthRecord {
     lines: string[]
     importedCsv?: { text: string; sha256: string; receivedAt: string }
     personalNote?: boolean
+    document?: {
+      mediaType: 'application/pdf' | 'image/png' | 'image/jpeg'
+      byteLength: number
+      sha256: string
+      pages: number
+      reviewedAt?: string
+    }
   }
   observations: (Observation & { line: number })[]
   allergy?: { substance: string; assertion: 'present' | 'none-known'; line: number }

@@ -4,7 +4,12 @@ import { ArrowUpRight, FileText, FlaskConical, Stethoscope, Pill, Check } from '
 import { formatDate } from '@/lib/records/selectors'
 import type { HealthRecord } from '@/lib/records/types'
 
-export const recordIcons = { lab: FlaskConical, visit: Stethoscope, prescription: Pill }
+export const recordIcons = {
+  lab: FlaskConical,
+  visit: Stethoscope,
+  prescription: Pill,
+  document: FileText,
+}
 
 export function RecordTimeline({
   records,

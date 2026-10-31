@@ -13,7 +13,7 @@ const positions = [
   { x: 13, y: 51 },
   { x: 49, y: 54 },
 ]
-const icons = { lab: FlaskConical, visit: FileText, prescription: Pill }
+const icons = { lab: FlaskConical, visit: FileText, prescription: Pill, document: FileText }
 
 export function RecordConstellation({
   records,
