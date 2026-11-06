@@ -202,7 +202,7 @@ it('anchors user transcriptions to real pages without modifying original bytes o
   expect(updated.status).toBe('unreviewed')
   expect(updated.source.lines[0]).toContain('Page 2 · You entered HbA1c')
   expect(personalBrief(readWorkspace(db, 'owner-a').state, 'Test Owner', '2025-01-01')).toContain(
-    `Source: ${id}, page 2. Entered by you from the original document; not clinically verified.`,
+    `Method: Not entered. Source: ${id}, page 2. Entered by you from the original document; not clinically verified.`,
   )
   expect(readDocument(db, 'owner-a', id)?.bytes).toEqual(Buffer.from(bytes))
   const earlier = { ...updated, id: randomUUID(), occurredAt: '2025-01-01' }

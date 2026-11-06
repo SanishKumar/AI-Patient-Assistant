@@ -229,7 +229,7 @@ export function DocumentSourceDialog({
         onClose()
       }}
       title={record.title}
-      description={`${record.provider} · ${record.occurredAt} · Your original document and the readings you enter, side by side.`}
+      description={`${record.provider} · ${record.occurredAt}`}
     >
       <div className="document-review-layout">
         <section className="document-original" aria-label="Original document">
@@ -465,15 +465,15 @@ export function DocumentSourceDialog({
               <label className="document-checkbox">
                 <input
                   type="checkbox"
-                  checked={!reading.methodKnown}
+                  checked={reading.methodKnown}
                   onChange={(e) =>
                     update(index, {
-                      methodKnown: !e.target.checked,
-                      method: e.target.checked ? 'Not stated' : '',
+                      methodKnown: e.target.checked,
+                      method: e.target.checked ? '' : 'Not entered',
                     })
                   }
                 />{' '}
-                Method not stated on report
+                Include measurement method
               </label>
               {reading.methodKnown && (
                 <label>
@@ -533,7 +533,7 @@ export function DocumentSourceDialog({
                   metric,
                   value: '',
                   unit: units[metric][0],
-                  method: 'Not stated',
+                  method: 'Not entered',
                   methodKnown: false,
                   page,
                 })

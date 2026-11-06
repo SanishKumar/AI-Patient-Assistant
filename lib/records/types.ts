@@ -17,6 +17,10 @@ export interface Observation {
   page?: number
 }
 
+export function displayedMethod(reading: Pick<Observation, 'methodKnown' | 'method'>) {
+  return reading.methodKnown === false ? 'Not entered' : reading.method
+}
+
 export interface HealthRecord {
   id: string
   title: string

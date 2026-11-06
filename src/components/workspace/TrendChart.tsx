@@ -102,7 +102,9 @@ export function TrendChart({
         ))}
       </div>
       <p className="chart-caption">
-        {points.length < allPoints.length && (
+        {latest?.methodKnown === false &&
+          'The latest reading stands alone because its method has not been entered. '}
+        {latest?.methodKnown !== false && points.length < allPoints.length && (
           <>
             Chart: latest {points.length} readings in {latest?.unit}, using {latest?.method}. All
             readings are linked above.{' '}

@@ -17,7 +17,7 @@ export function recognizedReading(line: RecognizedLine, page: number) {
     value: Number(value),
     unit,
     page,
-    method: 'Not stated',
+    method: 'Not entered',
     methodKnown: false,
     recognizedLine: line,
   })

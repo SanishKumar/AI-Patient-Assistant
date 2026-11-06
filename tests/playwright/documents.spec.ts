@@ -98,7 +98,7 @@ test('uploads originals, recovers an interrupted save, and follows a transcribed
   await expect(page.locator('.document-page-text')).toContainText('HbA1c 6.7 %')
   await page.getByRole('button', { name: 'Add a reading', exact: true }).click()
   await page.getByLabel('Value 1', { exact: true }).fill('6.7')
-  await page.getByRole('checkbox', { name: 'Method not stated on report' }).uncheck()
+  await page.getByRole('checkbox', { name: 'Include measurement method' }).check()
   await page.getByLabel('Method 1', { exact: true }).fill('HPLC')
   await expect(page.getByLabel('Source page 1', { exact: true })).toHaveValue('2')
   await expect(page.getByRole('button', { name: 'Save readings', exact: true })).toBeDisabled()

@@ -54,7 +54,7 @@ Use **Upload a document** for PDFs, PNGs, and JPEGs up to 5 MiB each. PDFs may c
 
 Each workspace allows 50 MiB of original files within the shared 100-record limit. Identical file contents cannot be uploaded twice to the same workspace. The original bytes are encrypted separately from workspace metadata and included in SQLite backups. Deleting a record, erasing a workspace, or deleting an account removes its live original files transactionally.
 
-The viewer renders PDF pages in the browser and supports selectable PDF text. You can enter one HbA1c, LDL, and systolic reading per document with explicit units, a source page, and a method. Marking the method **Not stated** excludes the reading from comparisons. Search covers titles, providers, and saved readings.
+The viewer renders PDF pages in the browser and supports selectable PDF text. You can enter one HbA1c, LDL, and systolic reading per document with explicit units and a source page. Choose **Include measurement method** to enter the method as printed. A reading with an unrecorded method stays separate in comparisons. Search covers titles, providers, and saved readings.
 
 Choose **Read text on this page** on a scanned PDF, PNG, or JPEG to recognize printed English on your device. When a line contains one supported metric, number, and unit, **Use draft** opens an editable reading and highlights its source. Check the line and column headings before saving. Ambiguous lines, ranges, and other measurements stay available as text for manual review. The full transcript lives in memory until you leave the page or close the viewer. Saving a draft stores its source line and region with the checked value in the encrypted workspace. The visit brief identifies readings reviewed this way.
 

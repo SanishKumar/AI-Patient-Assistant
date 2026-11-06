@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
 import { importLabCsv, MAX_IMPORTED_RECORDS } from '../records/import-csv'
 import { commandSchema, newWorkspace, type PersonalWorkspace } from '../records/workspace'
-import { metricLabels, type HealthRecord } from '../records/types'
+import { displayedMethod, metricLabels, type HealthRecord } from '../records/types'
 import { seal, unseal } from './vault.mjs'
 import type { z } from 'zod'
 
@@ -90,7 +90,7 @@ export function applyWorkspaceCommand(
               ...record.source,
               lines: observations.map(
                 (r) =>
-                  `Page ${r.page} · ${r.recognizedLine ? 'You checked' : 'You entered'} ${r.label}: ${r.value} ${r.unit} · Method: ${r.method}`,
+                  `Page ${r.page} · ${r.recognizedLine ? 'You checked' : 'You entered'} ${r.label}: ${r.value} ${r.unit} · Method: ${displayedMethod(r)}`,
               ),
               document: { ...record.source.document, reviewedAt: now },
             },

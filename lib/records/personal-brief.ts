@@ -1,6 +1,6 @@
 import { compareMetric } from './selectors'
 import type { PersonalWorkspace } from './workspace'
-import type { Metric } from './types'
+import { displayedMethod, type Metric } from './types'
 
 const readingOrigins = {
   'user-transcribed': 'Entered by you from the original document',
@@ -38,7 +38,7 @@ export function personalBrief(workspace: PersonalWorkspace, name: string, since:
     ...records.flatMap((record) =>
       record.observations.map(
         (reading) =>
-          `${record.occurredAt} · ${reading.label}: ${reading.value} ${reading.unit} · Method: ${reading.method}. Source: ${record.id}, ${reading.page ? `page ${reading.page}` : `line ${reading.line}`}. ${reading.origin ? readingOrigins[reading.origin] : 'Imported from CSV'}; not clinically verified.`,
+          `${record.occurredAt} · ${reading.label}: ${reading.value} ${reading.unit} · Method: ${displayedMethod(reading)}. Source: ${record.id}, ${reading.page ? `page ${reading.page}` : `line ${reading.line}`}. ${reading.origin ? readingOrigins[reading.origin] : 'Imported from CSV'}; not clinically verified.`,
       ),
     ),
     '',

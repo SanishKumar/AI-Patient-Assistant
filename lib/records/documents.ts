@@ -59,8 +59,9 @@ export const transcriptionSchema = z
     const units = { hba1c: ['%', 'mmol/mol'], ldl: ['mg/dL', 'mmol/L'], systolic: ['mmHg'] }
     if (!units[value.metric].includes(value.unit))
       ctx.addIssue({ code: 'custom', message: 'The unit does not match the measurement.' })
-    if (!value.methodKnown && value.method !== 'Not stated')
-      ctx.addIssue({ code: 'custom', message: 'An unknown method must be marked Not stated.' })
+    // Earlier clients sent "Not stated" for a method they had not entered.
+    if (!value.methodKnown && !['Not entered', 'Not stated'].includes(value.method))
+      ctx.addIssue({ code: 'custom', message: 'Add the method or leave it unrecorded.' })
   })
 export type DocumentReading = z.infer<typeof transcriptionSchema>
 export const documentReviewSchema = z
