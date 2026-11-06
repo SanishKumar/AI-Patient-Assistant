@@ -20,8 +20,10 @@ export default function PrivacyPage() {
           Workspace contents are stored on the server running this installation, encrypted with its
           data key. This is server-side encryption; the server operator can decrypt the data.
           Account identity and action metadata are not encrypted by the application. Verification
-          and recovery emails are sent through the operator’s SMTP provider. Records are not sent to
-          a model, advertising service, or analytics provider.
+          and recovery emails are sent through the operator’s SMTP provider. When you choose to
+          recognize a page, your browser processes its pixels using recognition software from this
+          installation. The transcript stays in memory while that page is open. Saving a suggested
+          reading stores the selected source line and its position with the value you checked.
         </p>
         <h2>Your controls</h2>
         <p>

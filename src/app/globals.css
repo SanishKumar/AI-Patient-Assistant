@@ -4193,3 +4193,46 @@ select {
     gap: 12px;
   }
 }
+.document-raster {
+  position: relative;
+}
+.recognized-line-marker {
+  position: absolute;
+  pointer-events: none;
+  outline: 2px solid #9b4b5f;
+  background: #f8986650;
+}
+.page-recognition {
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid #e2cfe1;
+  border-radius: 14px;
+  background: linear-gradient(120deg, #f6edf8, #fff5ee);
+  color: #49314f;
+  font-size: 13px;
+}
+.page-recognition progress {
+  display: block;
+  accent-color: #714080;
+  margin: 10px 0;
+  width: 100%;
+}
+.page-recognition .small-note {
+  margin: 8px 0 0;
+}
+.recognition-candidate {
+  margin: 8px 6px 0 0;
+}
+.reading-source {
+  border-left: 3px solid #b35c70;
+  padding: 8px 10px;
+  background: #fff5f0;
+  color: #4c3453;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.reading-source span,
+.reading-source q {
+  display: block;
+  margin-bottom: 3px;
+}

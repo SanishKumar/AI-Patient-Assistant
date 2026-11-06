@@ -123,8 +123,8 @@ export function DocumentUploadDialog({
         </label>
         <p className="small-note">
           <ShieldCheck size={15} /> Originals are encrypted on the server. Password-protected PDFs,
-          forms, scripts, and attachments are not accepted. Readings are entered by you; no
-          automatic extraction runs.
+          forms, scripts, and attachments are not accepted. After upload, you can read printed
+          English text on your device and check readings against the original.
         </p>
         <p className="document-storage">
           {used ? formatBytes(used) : '0 MB'} of {formatBytes(MAX_DOCUMENT_STORAGE_BYTES)} used

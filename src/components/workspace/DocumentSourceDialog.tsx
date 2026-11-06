@@ -7,6 +7,7 @@ import { documentReviewSchema, formatBytes, type DocumentReading } from '@/lib/r
 import { metricLabels, type HealthRecord, type Metric } from '@/lib/records/types'
 import type { WorkspaceCommand } from '@/lib/records/workspace'
 import { WorkspaceDialog } from './WorkspaceDialog'
+import { PageRecognition } from './PageRecognition'
 
 const units: Record<Metric, DocumentReading['unit'][]> = {
   hba1c: ['%', 'mmol/mol'],
@@ -37,7 +38,9 @@ export function DocumentSourceDialog({
   retry: () => Promise<boolean>
 }) {
   const info = record.source.document!
-  const [page, setPage] = useState(record.observations.find((r) => r.line === line)?.page ?? 1)
+  const selected = record.observations.find((r) => r.line === line)
+  const [page, setPage] = useState(selected?.page ?? 1)
+  const [highlightedMetric, setHighlightedMetric] = useState<Metric | undefined>(selected?.metric)
   const [pdf, setPdf] = useState<PDFDocumentProxy>()
   const [url, setUrl] = useState('')
   const [loadError, setLoadError] = useState('')
@@ -46,6 +49,8 @@ export function DocumentSourceDialog({
   const [attempt, setAttempt] = useState(0)
   const [zoom, setZoom] = useState(1)
   const canvas = useRef<HTMLCanvasElement>(null)
+  const image = useRef<HTMLImageElement>(null)
+  const highlight = useRef<HTMLSpanElement>(null)
   const [readings, setReadings] = useState<Draft[]>(
     record.observations.map((r) => ({
       metric: r.metric,
@@ -54,12 +59,41 @@ export function DocumentSourceDialog({
       method: r.method,
       methodKnown: r.methodKnown !== false,
       page: r.page ?? 1,
+      recognizedLine: r.recognizedLine,
     })),
   )
   const [confirmed, setConfirmed] = useState(false)
   const [problem, setProblem] = useState('')
   const [saved, setSaved] = useState(false)
   const changed = useRef(false)
+  const region = readings.find(
+    (r) => r.page === page && r.metric === highlightedMetric,
+  )?.recognizedLine
+  useEffect(() => {
+    if (region && rendered === page)
+      highlight.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [region, rendered, page])
+  function goToPage(next: number) {
+    if (next === page) return
+    setRendered(0)
+    setPageText('')
+    setPage(next)
+  }
+  function showLine(metric: Metric, sourcePage: number) {
+    goToPage(sourcePage)
+    setHighlightedMetric(metric)
+    requestAnimationFrame(() =>
+      highlight.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' }),
+    )
+  }
+  function addReading(reading: Draft) {
+    if (busy || readings.some((r) => r.metric === reading.metric)) return
+    setReadings([...readings, reading])
+    changed.current = true
+    setSaved(false)
+    setConfirmed(false)
+    if (reading.recognizedLine) showLine(reading.metric, reading.page)
+  }
   useEffect(() => {
     const guard = (event: BeforeUnloadEvent) => {
       if (changed.current) event.preventDefault()
@@ -71,7 +105,14 @@ export function DocumentSourceDialog({
     changed.current = true
     setSaved(false)
     setConfirmed(false)
-    setReadings((current) => current.map((r, i) => (i === index ? { ...r, ...values } : r)))
+    setReadings((current) =>
+      current.map((r, i) => {
+        if (i !== index) return r
+        const next = { ...r, ...values }
+        if (next.metric !== r.metric || next.page !== r.page) delete next.recognizedLine
+        return next
+      }),
+    )
   }
   useEffect(() => {
     let disposed = false
@@ -197,7 +238,7 @@ export function DocumentSourceDialog({
               className="icon-button"
               aria-label="Previous page"
               disabled={page <= 1}
-              onClick={() => setPage(page - 1)}
+              onClick={() => goToPage(page - 1)}
             >
               <ChevronLeft size={18} />
             </button>
@@ -208,7 +249,7 @@ export function DocumentSourceDialog({
               className="icon-button"
               aria-label="Next page"
               disabled={page >= info.pages}
-              onClick={() => setPage(page + 1)}
+              onClick={() => goToPage(page + 1)}
             >
               <ChevronRight size={18} />
             </button>
@@ -254,39 +295,66 @@ export function DocumentSourceDialog({
                 aria-label="Scrollable document page"
                 tabIndex={0}
               >
-                {info.mediaType === 'application/pdf' ? (
-                  <canvas
-                    ref={canvas}
-                    role="img"
-                    aria-label={`Original document, page ${page}`}
-                    style={{
-                      visibility: rendered === page ? 'visible' : 'hidden',
-                      width: `${zoom * 100}%`,
-                    }}
-                  />
-                ) : (
-                  url && (
-                    // The owner-only blob URL must stay in the browser, outside the image optimizer.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={url}
-                      style={{ width: `${zoom * 100}%` }}
-                      alt={`Original document: ${record.title}`}
-                      onError={() =>
-                        setLoadError(
-                          'This image could not be displayed. Download the original to open it on your device.',
-                        )
-                      }
+                <div className="document-raster" style={{ width: `${zoom * 100}%` }}>
+                  {info.mediaType === 'application/pdf' ? (
+                    <canvas
+                      ref={canvas}
+                      role="img"
+                      aria-label={`Original document, page ${page}`}
+                      style={{
+                        visibility: rendered === page ? 'visible' : 'hidden',
+                      }}
                     />
-                  )
-                )}
+                  ) : (
+                    url && (
+                      // The owner-only blob URL must stay in the browser, outside the image optimizer.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        ref={image}
+                        src={url}
+                        onLoad={() => setRendered(1)}
+                        alt={`Original document: ${record.title}`}
+                        onError={() =>
+                          setLoadError(
+                            'This image could not be displayed. Download the original to open it on your device.',
+                          )
+                        }
+                      />
+                    )
+                  )}
+                  {region && rendered === page && (
+                    <span
+                      ref={highlight}
+                      className="recognized-line-marker"
+                      aria-hidden="true"
+                      style={{
+                        left: region.left * 100 + '%',
+                        top: region.top * 100 + '%',
+                        width: (region.right - region.left) * 100 + '%',
+                        height: (region.bottom - region.top) * 100 + '%',
+                      }}
+                    />
+                  )}
+                </div>
               </div>
+              {rendered === page && (
+                <PageRecognition
+                  key={page + ':' + attempt}
+                  page={page}
+                  source={() =>
+                    info.mediaType === 'application/pdf' ? canvas.current : image.current
+                  }
+                  usedMetrics={readings.map((r) => r.metric)}
+                  busy={busy}
+                  onUse={(r) => addReading({ ...r, value: String(r.value) })}
+                />
+              )}
               {pdf && rendered === page && (
                 <details className="document-page-text">
                   <summary>Text on this page</summary>
                   <p>
                     {pageText ||
-                      'This page has no selectable text. It may be a scan; automatic text recognition is not available yet.'}
+                      'Choose “Read text on this page” to recognize printed text in a scan.'}
                   </p>
                 </details>
               )}
@@ -324,15 +392,26 @@ export function DocumentSourceDialog({
             }
           }}
         >
-          <span className="eyebrow">FROM PAGE TO PICTURE</span>
-          <h3>Readings, with a reference.</h3>
+          <h3>Review readings</h3>
           <p className="small-note">
-            Enter only what the report states. These are your transcriptions, not clinically
-            verified values. No diagnosis or treatment is inferred.
+            Check each value and unit against its source page before saving.
           </p>
           {readings.map((reading, index) => (
             <fieldset key={index} className="document-reading" disabled={busy}>
               <legend>Reading {index + 1}</legend>
+              {reading.recognizedLine && (
+                <div className="reading-source">
+                  <span>Recognized line · page {reading.page}</span>
+                  <q>{reading.recognizedLine.text}</q>
+                  <button
+                    type="button"
+                    className="text-link"
+                    onClick={() => showLine(reading.metric, reading.page)}
+                  >
+                    Show source line
+                  </button>
+                </div>
+              )}
               <label>
                 Measurement
                 <select
@@ -417,7 +496,7 @@ export function DocumentSourceDialog({
                   onChange={(e) => {
                     const value = Number(e.target.value)
                     update(index, { page: value })
-                    setPage(value)
+                    goToPage(value)
                   }}
                 >
                   {Array.from({ length: info.pages }, (_, i) => (
@@ -450,20 +529,14 @@ export function DocumentSourceDialog({
                 const metric = (Object.keys(metricLabels) as Metric[]).find(
                   (m) => !readings.some((r) => r.metric === m),
                 )!
-                setReadings([
-                  ...readings,
-                  {
-                    metric,
-                    value: '',
-                    unit: units[metric][0],
-                    method: 'Not stated',
-                    methodKnown: false,
-                    page,
-                  },
-                ])
-                changed.current = true
-                setSaved(false)
-                setConfirmed(false)
+                addReading({
+                  metric,
+                  value: '',
+                  unit: units[metric][0],
+                  method: 'Not stated',
+                  methodKnown: false,
+                  page,
+                })
               }}
             >
               <Plus size={15} /> Add a reading

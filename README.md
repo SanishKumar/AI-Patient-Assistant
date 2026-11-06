@@ -13,7 +13,7 @@ A personal health record workspace: keep original sources, trace measurements, w
 - Export workspace data, delete individual records, erase the workspace, or delete the account.
 - Public accounts use email verification and password recovery. Password reset revokes existing sessions.
 
-The product organizes user-supplied information; it does not diagnose, prescribe, verify clinical accuracy, sign clinician notes, or book appointments. OCR, caregiver sharing, cloud integrations, and model-generated answers are not implemented. The retired clinical chat endpoint remains disabled.
+The product organizes user-supplied information; it does not diagnose, prescribe, verify clinical accuracy, sign clinician notes, or book appointments. Caregiver sharing, cloud integrations, and model-generated answers are not implemented. The retired clinical chat endpoint remains disabled.
 
 ## Run locally
 
@@ -54,7 +54,9 @@ Use **Upload a document** for PDFs, PNGs, and JPEGs up to 5 MiB each. PDFs may c
 
 Each workspace allows 50 MiB of original files within the shared 100-record limit. Identical file contents cannot be uploaded twice to the same workspace. The original bytes are encrypted separately from workspace metadata and included in SQLite backups. Deleting a record, erasing a workspace, or deleting an account removes its live original files transactionally.
 
-The viewer renders PDF pages locally in the browser; it does not run document scripts or display interactive annotations. You can enter one HbA1c, LDL, and systolic reading per document, each with explicit units, a source page, and a method (or **Not stated**). Confirmation records your review, never clinical verification. Unknown methods are excluded from comparisons. Original bytes remain unchanged. Selectable PDF text is available for reading; scans have no automatic text recognition. Search covers titles, providers, and transcribed readings, not every word inside uploaded files.
+The viewer renders PDF pages in the browser and supports selectable PDF text. You can enter one HbA1c, LDL, and systolic reading per document with explicit units, a source page, and a method. Marking the method **Not stated** excludes the reading from comparisons. Search covers titles, providers, and saved readings.
+
+Choose **Read text on this page** on a scanned PDF, PNG, or JPEG to recognize printed English on your device. When a line contains one supported metric, number, and unit, **Use draft** opens an editable reading and highlights its source. Check the line and column headings before saving. Ambiguous lines, ranges, and other measurements stay available as text for manual review. The full transcript lives in memory until you leave the page or close the viewer. Saving a draft stores its source line and region with the checked value in the encrypted workspace. The visit brief identifies readings reviewed this way.
 
 Download originals from their viewers. The workspace JSON export contains their metadata, fingerprints, and entered readings, but not the binary files.
 

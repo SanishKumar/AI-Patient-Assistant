@@ -64,8 +64,8 @@ export default async function Home() {
             <span>01 / COLLECT</span>
             <h2>A home for the details.</h2>
             <p>
-              Import supported lab CSVs and keep your own journal. Your original source stays
-              attached to each reading.
+              Upload a report, lab image, or CSV. Read English print on your device and check
+              suggested readings against the highlighted line on your report.
             </p>
           </article>
           <article>
