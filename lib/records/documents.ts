@@ -17,6 +17,26 @@ export const documentMetadataSchema = z
   })
   .strict()
 export type DocumentMetadata = z.infer<typeof documentMetadataSchema>
+const fraction = z.number().min(0).max(1)
+export const recognizedLineSchema = z
+  .object({
+    text: z
+      .string()
+      .trim()
+      .min(1)
+      .max(160)
+      .regex(/^[^\r\n]+$/),
+    left: fraction,
+    top: fraction,
+    right: fraction,
+    bottom: fraction,
+  })
+  .strict()
+  .refine(
+    (line) => line.left < line.right && line.top < line.bottom,
+    'Choose a region inside the page.',
+  )
+export type RecognizedLine = z.infer<typeof recognizedLineSchema>
 export const documentUploadSchema = z
   .object({
     revision: z.number().int().nonnegative(),
@@ -32,6 +52,7 @@ export const transcriptionSchema = z
     method: z.string().trim().min(1).max(160),
     methodKnown: z.boolean(),
     page: z.number().int().min(1).max(MAX_DOCUMENT_PAGES),
+    recognizedLine: recognizedLineSchema.optional(),
   })
   .strict()
   .superRefine((value, ctx) => {

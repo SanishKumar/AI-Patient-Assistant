@@ -1,3 +1,5 @@
+import type { RecognizedLine } from './documents'
+
 export type RecordKind = 'lab' | 'visit' | 'prescription' | 'document'
 export type ReviewStatus = 'verified' | 'unreviewed'
 export type Metric = 'hba1c' | 'systolic' | 'ldl'
@@ -10,7 +12,8 @@ export interface Observation {
   method: string
   reference?: string
   methodKnown?: boolean
-  origin?: 'user-transcribed'
+  origin?: 'user-transcribed' | 'ocr-assisted'
+  recognizedLine?: RecognizedLine
   page?: number
 }
 

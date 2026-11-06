@@ -73,7 +73,9 @@ export function applyWorkspaceCommand(
             ...reading,
             label: metricLabels[reading.metric],
             line: i + 1,
-            origin: 'user-transcribed' as const,
+            origin: reading.recognizedLine
+              ? ('ocr-assisted' as const)
+              : ('user-transcribed' as const),
           }))
           const updated: HealthRecord = {
             ...record,
@@ -88,7 +90,7 @@ export function applyWorkspaceCommand(
               ...record.source,
               lines: observations.map(
                 (r) =>
-                  `Page ${r.page} · You entered ${r.label}: ${r.value} ${r.unit} · Method: ${r.method}`,
+                  `Page ${r.page} · ${r.recognizedLine ? 'You checked' : 'You entered'} ${r.label}: ${r.value} ${r.unit} · Method: ${r.method}`,
               ),
               document: { ...record.source.document, reviewedAt: now },
             },
