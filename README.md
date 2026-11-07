@@ -9,7 +9,7 @@ A personal health record workspace: keep original sources, trace measurements, w
 - Upload PDF reports and PNG/JPEG images, browse their pages, download unchanged originals, and enter readings linked to the page you checked.
 - Keep self-reported journal entries, dated separately from when you saved them.
 - Search your records, explore historical snapshots, and compare measurements with matching units and methods.
-- Save a visit plan, add questions with optional source links, and download a brief with your actual records and notes.
+- Save a visit plan and questions, then choose which details, reports, and journal entries to bring. Preview the brief, print it, save a PDF through the browser, or download plain text.
 - Export workspace data, delete individual records, erase the workspace, or delete the account.
 - Public accounts use email verification and password recovery. Password reset revokes existing sessions.
 
@@ -71,6 +71,14 @@ date,provider,author,metric,value,unit,method
 Each file represents one report: the date, provider, and author must match. Include one HbA1c (`hba1c`) and/or LDL (`ldl`) value. HbA1c accepts `%` or `mmol/mol`; LDL accepts `mg/dL` or `mmol/L`. Supply explicit units and methods. Files must be UTF-8, at most 16 KB and 50 physical lines. A workspace holds up to 100 records, including journal entries. Formulas, multiline CSV fields, invalid dates, and duplicate measurements are rejected. Importing the same contents twice does not create another record.
 
 Files are checked in the browser, then independently parsed on the server. An import is always unreviewed. The original decoded text, line endings, SHA-256 fingerprint, and line references stay attached. The fingerprint identifies contents, not authenticity. Charts plot up to six recent readings with matching units and methods; other readings remain accessible as sources. No units are silently converted. Import does not establish patient identity or clinical accuracy; the owner confirms that each file belongs to them.
+
+## Bring a brief to a visit
+
+In **Visit preparation**, choose **Build visit brief**. Each new brief starts with your saved visit details and questions. Reports and journal entries are opt-in. Selecting a report includes its saved readings and a numbered source reference. A report with no saved readings contributes its source reference only. Selecting a journal entry includes its full text.
+
+The preview, printout, and text download use the same selection. Readings cite the original page or CSV line. Comparisons use selected reports with matching units and known methods. An omitted source is also omitted from comparisons and question references. Review your question text separately since it appears as written.
+
+Choose **Print / save PDF** to open the browser’s print dialog or **Download text** for a plain-text copy. Closing the builder discards these choices. The account export under **My account** still contains the full workspace.
 
 ## Storage and ownership
 

@@ -80,8 +80,8 @@ export default async function Home() {
             <span>03 / PREPARE</span>
             <h2>Walk in with questions.</h2>
             <p>
-              Plan your visit and download a brief with your questions, journal entries, and record
-              references.
+              Choose the questions and records you want to discuss, then bring a copy of your visit
+              brief on paper or on your phone.
             </p>
           </article>
         </section>

@@ -36,6 +36,11 @@ export default function PrivacyPage() {
         </p>
         <h2>Copies and backups</h2>
         <p>
+          Visit briefs are assembled in your browser. Visit details and questions start selected.
+          You choose which reports and journal entries to include. Closing the builder clears the
+          selections. Printing or downloading creates a copy for you to keep or share.
+        </p>
+        <p>
           Downloads stay wherever you saved them. Server backups are managed by the operator and may
           retain deleted data until those backups expire. Ask the operator about their retention
           period, hosting location, and contact process before using an installation with sensitive
