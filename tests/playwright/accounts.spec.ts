@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext } from '@playwright/test'
+import { test, expect, type APIRequestContext, type Page } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import AxeBuilder from '@axe-core/playwright'
@@ -16,9 +16,95 @@ async function createAccount(request: APIRequestContext) {
   return { email, id: (await response.json()).user.id as string }
 }
 
+async function printedBrief(page: Page) {
+  const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  const bytes = await page.pdf({
+    format: 'A4',
+    margin: { top: '16mm', bottom: '16mm', left: '16mm', right: '16mm' },
+  })
+  const task = getDocument({ data: new Uint8Array(bytes), useSystemFonts: true })
+  try {
+    const pdf = await task.promise
+    const pages = []
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const text = await (await pdf.getPage(i)).getTextContent()
+      pages.push(text.items.map((item) => ('str' in item ? item.str : '')).join(' '))
+    }
+    return pages
+  } finally {
+    await task.destroy()
+  }
+}
+
+async function checkVisitBrief(page: Page, mobile: boolean) {
+  await page.getByRole('button', { name: 'Build visit brief' }).click()
+  const dialog = page.getByRole('dialog')
+  const paper = dialog.getByRole('article', { name: 'Brief preview' })
+  const note = dialog.getByRole('checkbox', { name: /Question after my walk/ })
+  await expect(note).not.toBeChecked()
+  if (mobile) await dialog.getByRole('button', { name: 'View preview' }).click()
+  await expect(paper).toContainText('What should I keep track of?')
+  await expect(paper).not.toContainText('Question after my walk')
+  await expect(paper).not.toContainText('Source index')
+  expect(
+    (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
+      .violations,
+  ).toEqual([])
+  const download = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: 'Download text' }).click()
+  const brief = await readFile((await (await download).path())!, 'utf8')
+  const normalize = (value: string) => value.replace(/\s+/g, ' ').trim()
+  expect(normalize(brief)).toBe(normalize(await paper.innerText()))
+  expect(brief).toContain('Test Explorer')
+  expect(brief).toContain('Test clinic')
+  expect(brief).not.toMatch(/fictional observation|Question after my walk|Ananya/)
+  if (!mobile) {
+    const pages = await printedBrief(page)
+    expect(pages).toHaveLength(1)
+    expect(normalize(pages.join(' '))).toBe(normalize(brief))
+  }
+  if (mobile) await dialog.getByRole('button', { name: 'Choose contents' }).click()
+  await dialog.getByRole('checkbox', { name: /Visit details/ }).uncheck()
+  await dialog.getByRole('checkbox', { name: /What should I keep track/ }).uncheck()
+  if (mobile) await dialog.getByRole('button', { name: 'View preview' }).click()
+  await expect(dialog.getByRole('button', { name: 'Download text' })).toBeDisabled()
+  await expect(dialog.getByRole('button', { name: 'Print / save PDF' })).toBeDisabled()
+  if (mobile) await dialog.getByRole('button', { name: 'Choose contents' }).click()
+  await note.check()
+  if (mobile) await dialog.getByRole('button', { name: 'View preview' }).click()
+  await expect(paper).toContainText('Last journal line')
+  await expect(paper).not.toContainText('Test clinic')
+  await page.evaluate(() => {
+    window.print = () => window.dispatchEvent(new Event('beforeprint'))
+  })
+  const printed = page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        window.addEventListener('beforeprint', () => resolve(), { once: true }),
+      ),
+  )
+  await dialog.getByRole('button', { name: 'Print / save PDF' }).click()
+  await printed
+  if (!mobile) {
+    const pages = await printedBrief(page)
+    expect(pages.length).toBeGreaterThan(1)
+    expect(pages.at(-1)).toContain('Source index')
+    const text = normalize(pages.join(' '))
+    expect(text).toContain('Last journal line')
+    expect(text).not.toMatch(
+      /Test clinic|What should I keep track|Download text|Choose contents|Build your visit brief/,
+    )
+  }
+  await dialog.getByRole('button', { name: 'Close dialog' }).click()
+  await page.getByRole('button', { name: 'Build visit brief' }).click()
+  await expect(note).not.toBeChecked()
+  await dialog.getByRole('button', { name: 'Close dialog' }).click()
+}
+
 test('creates an empty personal workspace, saves a journal and visit, and keeps the demo separate', async ({
   page,
   context,
+  isMobile,
 }) => {
   test.setTimeout(60000)
   await page.goto('/demo')
@@ -48,7 +134,9 @@ test('creates an empty personal workspace, saves a journal and visit, and keeps 
   ).toEqual([])
   await page.getByRole('button', { name: 'Write a journal entry', exact: true }).click()
   await page.getByLabel('Entry title').fill('Question after my walk')
-  await page.getByLabel('Your notes').fill('A fictional observation for testing.')
+  await page
+    .getByLabel('Your notes')
+    .fill('A fictional observation for testing.\n'.repeat(90) + 'Last journal line')
   await page.getByRole('button', { name: 'Save journal entry' }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await page.getByRole('button', { name: 'Visit preparation', exact: true }).click()
@@ -64,13 +152,7 @@ test('creates an empty personal workspace, saves a journal and visit, and keeps 
     .selectOption({ label: 'Question after my walk' })
   await page.getByRole('button', { name: 'Add question', exact: true }).click()
   await expect(page.locator('.question-list')).toContainText('What should I keep track of?')
-  const download = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Export visit brief' }).click()
-  const brief = await readFile((await (await download).path())!, 'utf8')
-  expect(brief).toContain('Test Explorer')
-  expect(brief).toContain('Test clinic')
-  expect(brief).toContain('A fictional observation for testing.')
-  expect(brief).not.toContain('Ananya')
+  await checkVisitBrief(page, isMobile)
   await page.reload()
   await page.getByRole('button', { name: 'Visit preparation', exact: true }).click()
   await expect(page.locator('.question-list')).toContainText('What should I keep track of?')

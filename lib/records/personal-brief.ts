@@ -19,8 +19,8 @@ export function initialBriefSelection(workspace: PersonalWorkspace): BriefSelect
 }
 
 const readingOrigins = {
-  'user-transcribed': 'Entered by you from the original document',
-  'ocr-assisted': 'Recognized from the page and checked by you',
+  'user-transcribed': 'Transcribed by the patient from the original document',
+  'ocr-assisted': 'Recognized from the page and checked by the patient',
 }
 
 export function buildPersonalBrief(
@@ -108,28 +108,11 @@ export function buildPersonalBrief(
   }
 }
 
-export type PersonalBrief = ReturnType<typeof buildPersonalBrief>
-
-export function briefText(brief: PersonalBrief) {
+export function briefText(brief: ReturnType<typeof buildPersonalBrief>) {
   return [
     brief.title,
     brief.byline,
     brief.context,
     ...brief.sections.map((section) => [section.title, ...section.entries].join('\n')),
   ].join('\n\n')
-}
-
-export function personalBrief(workspace: PersonalWorkspace, name: string, since: string) {
-  return briefText(
-    buildPersonalBrief(
-      workspace,
-      name,
-      {
-        ...initialBriefSelection(workspace),
-        recordIds: workspace.records.map((record) => record.id),
-        baseline: since,
-      },
-      new Date().toISOString().slice(0, 10),
-    ),
-  )
 }

@@ -7,7 +7,6 @@ import {
   ArrowUpRight,
   CalendarDays,
   Check,
-  Download,
   FilePlus2,
   FileText,
   History,
@@ -21,7 +20,6 @@ import {
 import type { WorkspaceSnapshot } from '@/lib/records/workspace'
 import { noteSchema, visitSchema } from '@/lib/records/workspace'
 import { formatDate, observationSeries, recordsAsOf, searchRecords } from '@/lib/records/selectors'
-import { personalBrief } from '@/lib/records/personal-brief'
 import { type Metric, metricLabels } from '@/lib/records/types'
 import { usePersonalWorkspace } from './usePersonalWorkspace'
 import { RecordImportDialog } from './RecordImportDialog'
@@ -32,7 +30,7 @@ import { RecordTimeline } from './RecordTimeline'
 import { TrendChart } from './TrendChart'
 import { WorkspaceDialog } from './WorkspaceDialog'
 import { AccountDialog } from './AccountDialog'
-import { downloadText } from './downloads'
+import { VisitBriefDialog } from './VisitBriefDialog'
 
 const tabs = [
   { id: 'overview', name: 'Overview', icon: LayoutGrid },
@@ -68,6 +66,7 @@ export function PersonalWorkspace({
   const [questionSource, setQuestionSource] = useState('')
   const [visitEditing, setVisitEditing] = useState(false)
   const [visitError, setVisitError] = useState('')
+  const [briefOpen, setBriefOpen] = useState(false)
   const today = new Date().toISOString().slice(0, 10)
   const [asOf, setAsOf] = useState(today)
   const sorted = recordsAsOf(state.records, today)
@@ -75,10 +74,6 @@ export function PersonalWorkspace({
   const latest = series.at(-1)
   const openSource = (id: string, line?: number) => setSource({ id, line })
   const selectedRecord = state.records.find((r) => r.id === source?.id)
-  const firstDate =
-    [...state.records].sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))[0]?.occurredAt ??
-    today
-  const [since, setSince] = useState('')
 
   useEffect(() => {
     const guard = (event: BeforeUnloadEvent) => {
@@ -453,14 +448,9 @@ export function PersonalWorkspace({
               <button
                 className="button button-primary"
                 disabled={busy}
-                onClick={() =>
-                  downloadText(
-                    personalBrief(state, viewer.name, since || firstDate),
-                    'aether-visit-brief.txt',
-                  )
-                }
+                onClick={() => setBriefOpen(true)}
               >
-                <Download size={16} /> Export visit brief
+                <FileText size={16} /> Build visit brief
               </button>
             </div>
             <div className="personal-two-column visit-columns">
@@ -539,20 +529,6 @@ export function PersonalWorkspace({
                     </button>
                   </div>
                 )}
-                <label className="personal-date">
-                  Compare measurements from
-                  <input
-                    type="date"
-                    aria-label="Brief comparison baseline"
-                    value={since || firstDate}
-                    max={today}
-                    onChange={(e) => setSince(e.target.value)}
-                  />
-                </label>
-                <p className="small-note">
-                  Your exported brief includes comparable changes, source references, questions, and
-                  journal entries. Imported information is not clinically verified.
-                </p>
               </section>
               <section className="panel personal-form-panel">
                 <div className="panel-heading">
@@ -648,6 +624,13 @@ export function PersonalWorkspace({
           <Link href="/demo">Explore the demo</Link>
         </footer>
       </main>
+      {briefOpen && (
+        <VisitBriefDialog
+          workspace={state}
+          name={viewer.name}
+          onClose={() => setBriefOpen(false)}
+        />
+      )}
       <RecordImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}

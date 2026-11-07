@@ -8,7 +8,11 @@ import { detectDocumentType, inspectDocument } from '../../lib/server/document-v
 import { uploadDocument, readDocument } from '../../lib/server/documents'
 import { applyWorkspaceCommand, readWorkspace } from '../../lib/server/workspaces'
 import { compareMetric } from '../../lib/records/selectors'
-import { personalBrief } from '../../lib/records/personal-brief'
+import {
+  briefText,
+  buildPersonalBrief,
+  initialBriefSelection,
+} from '../../lib/records/personal-brief'
 import {
   documentReviewSchema,
   MAX_DOCUMENT_BYTES,
@@ -201,8 +205,21 @@ it('anchors user transcriptions to real pages without modifying original bytes o
   expect(updated.observations[0]).toMatchObject({ ...reading, origin: 'user-transcribed', line: 1 })
   expect(updated.status).toBe('unreviewed')
   expect(updated.source.lines[0]).toContain('Page 2 · You entered HbA1c')
-  expect(personalBrief(readWorkspace(db, 'owner-a').state, 'Test Owner', '2025-01-01')).toContain(
-    'Method: Not entered. Source: [1], page 2. Entered by you from the original document.',
+  const { state } = readWorkspace(db, 'owner-a')
+  expect(
+    briefText(
+      buildPersonalBrief(
+        state,
+        'Test Owner',
+        {
+          ...initialBriefSelection(state),
+          recordIds: [id],
+        },
+        '2026-11-01',
+      ),
+    ),
+  ).toContain(
+    'Method: Not entered. Source: [1], page 2. Transcribed by the patient from the original document.',
   )
   expect(readDocument(db, 'owner-a', id)?.bytes).toEqual(Buffer.from(bytes))
   const earlier = { ...updated, id: randomUUID(), occurredAt: '2025-01-01' }

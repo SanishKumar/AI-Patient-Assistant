@@ -8,6 +8,7 @@ import { version } from 'pdfjs-dist/package.json'
 test('uploads originals, recovers an interrupted save, and follows a transcribed reading to its page', async ({
   page,
   context,
+  isMobile,
 }) => {
   test.setTimeout(90000)
   const errors: string[] = []
@@ -184,6 +185,20 @@ test('uploads originals, recovers an interrupted save, and follows a transcribed
   await expect(page.locator('.recognized-line-marker')).toBeVisible()
   await expect(page.getByLabel('Value 1', { exact: true })).toHaveValue('100')
   await expect(page.locator('.reading-source')).toContainText('LDL 101 mg/dL')
+  await page.getByRole('button', { name: 'Close dialog', exact: true }).click()
+  await page.getByRole('button', { name: 'Visit preparation', exact: true }).click()
+  await page.getByRole('button', { name: 'Build visit brief' }).click()
+  const recordChoice = page.getByRole('checkbox', { name: /report-image\.png/ })
+  await expect(recordChoice).not.toBeChecked()
+  await recordChoice.check()
+  if (isMobile) await page.getByRole('button', { name: 'View preview' }).click()
+  const brief = page.getByRole('article', { name: 'Brief preview' })
+  await expect(brief).toContainText('LDL cholesterol: 100 mg/dL')
+  await expect(brief).toContainText(
+    'Source: [1], page 1. Recognized from the page and checked by the patient.',
+  )
+  await expect(brief).not.toContainText('my-report.pdf')
+  await expect(brief).not.toContainText('101 mg/dL')
   await page.getByRole('button', { name: 'Close dialog', exact: true }).click()
   await page.getByRole('button', { name: 'Record library', exact: false }).click()
   await page.getByRole('button', { name: 'Delete record: my-report.pdf', exact: true }).click()

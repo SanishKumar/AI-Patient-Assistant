@@ -10,7 +10,11 @@ import {
   exportWorkspace,
 } from '../../lib/server/workspaces'
 import { sampleLabCsv } from '../../lib/records/import-csv'
-import { personalBrief } from '../../lib/records/personal-brief'
+import {
+  briefText,
+  buildPersonalBrief,
+  initialBriefSelection,
+} from '../../lib/records/personal-brief'
 import { emptyVisit, type WorkspaceCommand } from '../../lib/records/workspace'
 import { seal, unseal } from '../../lib/server/vault.mjs'
 
@@ -181,7 +185,17 @@ describe('personal workspaces', () => {
     )
     expect(saved.state.records[0].observations).toEqual([])
     expect(saved.state.records[0].source.personalNote).toBe(true)
-    const brief = personalBrief(saved.state, 'Test Owner', '2026-01-01')
+    const brief = briefText(
+      buildPersonalBrief(
+        saved.state,
+        'Test Owner',
+        {
+          ...initialBriefSelection(saved.state),
+          recordIds: [saved.state.records[0].id],
+        },
+        '2026-11-01',
+      ),
+    )
     expect(brief).toContain('Test Owner')
     expect(brief).toContain('My clinic')
     expect(brief).toContain('A second line')

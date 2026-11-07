@@ -1,0 +1,227 @@
+'use client'
+
+import { useState } from 'react'
+import { Download, Printer } from 'lucide-react'
+import { briefText, buildPersonalBrief, initialBriefSelection } from '@/lib/records/personal-brief'
+import { formatDate } from '@/lib/records/selectors'
+import type { PersonalWorkspace } from '@/lib/records/workspace'
+import { downloadText } from './downloads'
+import { WorkspaceDialog } from './WorkspaceDialog'
+import styles from './VisitBriefDialog.module.css'
+
+function Choices({
+  label,
+  items,
+  selected,
+  onChange,
+  empty,
+}: {
+  label: string
+  items: { id: string; title: string; detail?: string }[]
+  selected: string[]
+  onChange: (id: string, checked: boolean) => void
+  empty: string
+}) {
+  return (
+    <fieldset className={styles.group}>
+      <legend>
+        {label}{' '}
+        <span>
+          {items.filter((item) => selected.includes(item.id)).length}/{items.length}
+        </span>
+      </legend>
+      {items.length ? (
+        <div className={styles.choices}>
+          {items.map((item) => (
+            <label key={item.id} className={styles.choice}>
+              <input
+                type="checkbox"
+                checked={selected.includes(item.id)}
+                onChange={(e) => onChange(item.id, e.target.checked)}
+              />
+              <span>
+                {item.title}
+                {item.detail && <small>{item.detail}</small>}
+              </span>
+            </label>
+          ))}
+        </div>
+      ) : (
+        <p className={styles.hint}>{empty}</p>
+      )}
+    </fieldset>
+  )
+}
+
+export function VisitBriefDialog({
+  workspace,
+  name,
+  onClose,
+}: {
+  workspace: PersonalWorkspace
+  name: string
+  onClose: () => void
+}) {
+  const [selection, setSelection] = useState(() => initialBriefSelection(workspace))
+  const [preparedOn] = useState(() => {
+    const now = new Date()
+    return [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0'),
+    ].join('-')
+  })
+  const [mobileView, setMobileView] = useState<'choices' | 'preview'>('choices')
+  const hasVisitDetails = Object.values(workspace.visit).some(Boolean)
+  const brief = buildPersonalBrief(workspace, name, selection, preparedOn)
+  const sorted = [...workspace.records].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
+  const items = sorted.map((r) => ({
+    id: r.id,
+    title: r.source.label,
+    detail: r.source.personalNote
+      ? formatDate(r.occurredAt)
+      : [
+          formatDate(r.occurredAt),
+          r.provider,
+          r.observations.length
+            ? `${r.observations.length} ${r.observations.length === 1 ? 'reading' : 'readings'}`
+            : 'Source reference only',
+        ].join(' · '),
+    journal: !!r.source.personalNote,
+  }))
+  function toggle(key: 'recordIds' | 'questionIds', id: string, checked: boolean) {
+    setSelection((current) => ({
+      ...current,
+      [key]: checked ? [...current[key], id] : current[key].filter((v) => v !== id),
+    }))
+  }
+  const hasContent = brief.sections.length > 0
+  const measuredRecords = sorted.filter(
+    (r) => selection.recordIds.includes(r.id) && r.observations.length,
+  )
+  return (
+    <WorkspaceDialog
+      open
+      wide
+      onClose={onClose}
+      title="Build your visit brief"
+      description="Choose what to bring to your visit. The preview shows what will appear in your printout or download."
+    >
+      <div className={styles.mobileSwitch} role="group" aria-label="Brief view">
+        <button
+          type="button"
+          aria-pressed={mobileView === 'choices'}
+          onClick={() => setMobileView('choices')}
+        >
+          Choose contents
+        </button>
+        <button
+          type="button"
+          aria-pressed={mobileView === 'preview'}
+          onClick={() => setMobileView('preview')}
+        >
+          View preview
+        </button>
+      </div>
+      <div className={styles.builder} data-view={mobileView}>
+        <div className={styles.picker}>
+          <label className={styles.choice}>
+            <input
+              type="checkbox"
+              disabled={!hasVisitDetails}
+              checked={selection.visitDetails}
+              onChange={(e) => setSelection({ ...selection, visitDetails: e.target.checked })}
+            />
+            <span>
+              Visit details
+              <small>
+                {hasVisitDetails
+                  ? 'Include the details saved in your visit plan.'
+                  : 'No details saved for this visit.'}
+              </small>
+            </span>
+          </label>
+          <Choices
+            label="Questions"
+            selected={selection.questionIds}
+            onChange={(id, checked) => toggle('questionIds', id, checked)}
+            items={workspace.questions.map((q) => ({ id: q.id, title: q.text }))}
+            empty="No questions saved."
+          />
+          <Choices
+            label="Records"
+            selected={selection.recordIds}
+            onChange={(id, checked) => toggle('recordIds', id, checked)}
+            items={items.filter((r) => !r.journal)}
+            empty="No reports saved."
+          />
+          {measuredRecords.length >= 2 && (
+            <label className={styles.baseline}>
+              Compare readings from
+              <input
+                type="date"
+                max={preparedOn}
+                value={selection.baseline}
+                onChange={(e) => setSelection({ ...selection, baseline: e.target.value })}
+              />
+              <small>Leave blank to use the earliest selected reading for each measurement.</small>
+            </label>
+          )}
+          <Choices
+            label="Journal entries"
+            selected={selection.recordIds}
+            onChange={(id, checked) => toggle('recordIds', id, checked)}
+            items={items.filter((r) => r.journal)}
+            empty="No journal entries saved."
+          />
+          <p className={styles.hint}>
+            Questions appear as written. Select a linked record to include its source reference.
+          </p>
+        </div>
+        <div className={styles.preview}>
+          <div className={styles.actions}>
+            <button
+              className="button button-primary"
+              disabled={!hasContent}
+              onClick={() => window.print()}
+            >
+              <Printer size={16} /> Print / save PDF
+            </button>
+            <button
+              className="button button-outline"
+              disabled={!hasContent}
+              onClick={() =>
+                downloadText(briefText(brief), 'aether-visit-brief.txt', 'text/plain;charset=utf-8')
+              }
+            >
+              <Download size={15} /> Download text
+            </button>
+          </div>
+          <article className={styles.paper} aria-label="Brief preview" tabIndex={0}>
+            {hasContent ? (
+              <>
+                <header>
+                  <h3>{brief.title}</h3>
+                  <p>{brief.byline}</p>
+                  <p>{brief.context}</p>
+                </header>
+                {brief.sections.map((section) => (
+                  <section key={section.title}>
+                    <h4>{section.title}</h4>
+                    {section.entries.map((entry, i) => (
+                      <p key={i}>{entry}</p>
+                    ))}
+                  </section>
+                ))}
+              </>
+            ) : (
+              <p className={styles.empty}>
+                Choose visit details, a question, or a record to start your brief.
+              </p>
+            )}
+          </article>
+        </div>
+      </div>
+    </WorkspaceDialog>
+  )
+}
