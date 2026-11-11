@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import AxeBuilder from '@axe-core/playwright'
 import { sampleLabCsv } from '../../lib/records/import-csv'
 import { PDFDocument } from 'pdf-lib'
+import { checkVisitHistory } from './visit-history'
 const origin = 'http://127.0.0.1:3000'
 const password = 'Fictional-preview-4829!'
 async function createAccount(request: APIRequestContext) {
@@ -153,6 +154,7 @@ test('creates an empty personal workspace, saves a journal and visit, and keeps 
   await page.getByRole('button', { name: 'Add question', exact: true }).click()
   await expect(page.locator('.question-list')).toContainText('What should I keep track of?')
   await checkVisitBrief(page, isMobile)
+  await checkVisitHistory(page, isMobile)
   await page.reload()
   await page.getByRole('button', { name: 'Visit preparation', exact: true }).click()
   await expect(page.locator('.question-list')).toContainText('What should I keep track of?')
@@ -177,6 +179,14 @@ test('creates an empty personal workspace, saves a journal and visit, and keeps 
   await page.getByRole('button', { name: 'Visit preparation', exact: true }).click()
   await expect(page.locator('.question-list')).toContainText('What should I keep track of?')
   await expect(page.locator('.question-list .text-link')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Past visits', exact: true }).click()
+  await page.getByRole('button', { name: /Test clinic.*19 January 2026/ }).click()
+  await expect(
+    page.getByRole('button', { name: 'Question after my walk', exact: true }),
+  ).toHaveCount(0)
+  await page.getByRole('button', { name: 'Delete visit', exact: true }).click()
+  await page.getByRole('button', { name: 'Delete past visit' }).click()
+  await expect(page.getByRole('heading', { name: 'No past visits yet.' })).toBeVisible()
   await page.getByRole('button', { name: 'My account' }).click()
   await page.getByRole('button', { name: 'Delete my account', exact: true }).click()
   await page.getByLabel('Type DELETE to confirm').fill('DELETE')

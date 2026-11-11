@@ -10,6 +10,7 @@ A personal health record workspace: keep original sources, trace measurements, w
 - Keep self-reported journal entries, dated separately from when you saved them.
 - Search your records, explore historical snapshots, and compare measurements with matching units and methods.
 - Save a visit plan and questions, then choose which details, reports, and journal entries to bring. Preview the brief, print it, save a PDF through the browser, or download plain text.
+- Record the outcome of an appointment, keep its original questions, and track follow-up steps with optional due dates.
 - Export workspace data, delete individual records, erase the workspace, or delete the account.
 - Public accounts use email verification and password recovery. Password reset revokes existing sessions.
 
@@ -79,6 +80,12 @@ In **Visit preparation**, choose **Build visit brief**. Each new brief starts wi
 The preview, printout, and text download use the same selection. Readings cite the original page or CSV line. Comparisons use selected reports with matching units and known methods. An omitted source is also omitted from comparisons and question references. Review your question text separately since it appears as written.
 
 Choose **Print / save PDF** to open the browser’s print dialog or **Download text** for a plain-text copy. Closing the builder discards these choices. The account export under **My account** still contains the full workspace.
+
+## After an appointment
+
+Choose **Past visits → Record a visit** to enter the actual visit date, your notes, and up to 12 personal follow-up steps. To finish your current plan, select **Move my current plan and questions into this visit**. Its details and questions go into the history entry together. You can choose which questions also carry into your next plan. You can also record an unrelated past appointment while keeping a future visit in preparation.
+
+Overview shows the first three open steps, with dated items first. Expand the list to see every open step across appointments. Open a past visit to edit your notes and steps, mark a step complete, reopen it, or delete the entry. Due dates appear in your workspace. Each workspace holds up to 100 past visits. In the brief builder, choosing a past visit includes its date, clinic, notes, and step statuses. Each new brief starts with past visits unselected.
 
 ## Storage and ownership
 

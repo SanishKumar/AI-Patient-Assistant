@@ -12,8 +12,9 @@ export default function PrivacyPage() {
         <p>
           Your account stores your name, email address, a password hash, and sessions. Your
           workspace stores the records you import, original CSV text, encrypted PDF/image files,
-          your page-linked readings, journal entries, visit details, questions, and action metadata.
-          The separate demo uses fictional content stored in your browser tab.
+          your page-linked readings, journal entries, visit plans, questions, past visit notes,
+          follow-up steps and their completion times, and action metadata. The separate demo uses
+          fictional content stored in your browser tab.
         </p>
         <h2>Where it goes</h2>
         <p>
@@ -31,14 +32,16 @@ export default function PrivacyPage() {
           JSON export includes document details and readings; download original PDFs and images from
           each document viewer. Individual records can be deleted from the record library. Deleting
           a record removes its original file and links from questions while preserving the question
-          text. Workspace erasure retains a revision and deletion receipt to reject stale writes.
-          Account deletion removes saved workspaces and sessions.
+          text. You can delete a visit and its follow-up steps in Past visits. Workspace erasure
+          retains a revision and deletion receipt to reject stale writes. Account deletion removes
+          saved workspaces and sessions.
         </p>
         <h2>Copies and backups</h2>
         <p>
           Visit briefs are assembled in your browser. Visit details and questions start selected.
-          You choose which reports and journal entries to include. Closing the builder clears the
-          selections. Printing or downloading creates a copy for you to keep or share.
+          You choose which reports, journal entries, and past visit notes and steps to include.
+          Closing the builder clears the selections. Printing or downloading creates a copy for you
+          to keep or share.
         </p>
         <p>
           Downloads stay wherever you saved them. Server backups are managed by the operator and may

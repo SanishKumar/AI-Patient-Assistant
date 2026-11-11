@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Download, Printer } from 'lucide-react'
 import { briefText, buildPersonalBrief, initialBriefSelection } from '@/lib/records/personal-brief'
-import { formatDate } from '@/lib/records/selectors'
+import { formatDate, localCalendarDate } from '@/lib/records/selectors'
 import type { PersonalWorkspace } from '@/lib/records/workspace'
 import { downloadText } from './downloads'
 import { WorkspaceDialog } from './WorkspaceDialog'
@@ -63,14 +63,7 @@ export function VisitBriefDialog({
   onClose: () => void
 }) {
   const [selection, setSelection] = useState(() => initialBriefSelection(workspace))
-  const [preparedOn] = useState(() => {
-    const now = new Date()
-    return [
-      now.getFullYear(),
-      String(now.getMonth() + 1).padStart(2, '0'),
-      String(now.getDate()).padStart(2, '0'),
-    ].join('-')
-  })
+  const [preparedOn] = useState(() => localCalendarDate())
   const [mobileView, setMobileView] = useState<'choices' | 'preview'>('choices')
   const hasVisitDetails = Object.values(workspace.visit).some(Boolean)
   const brief = buildPersonalBrief(workspace, name, selection, preparedOn)
@@ -89,7 +82,7 @@ export function VisitBriefDialog({
         ].join(' · '),
     journal: !!r.source.personalNote,
   }))
-  function toggle(key: 'recordIds' | 'questionIds', id: string, checked: boolean) {
+  function toggle(key: 'recordIds' | 'questionIds' | 'pastVisitIds', id: string, checked: boolean) {
     setSelection((current) => ({
       ...current,
       [key]: checked ? [...current[key], id] : current[key].filter((v) => v !== id),
@@ -174,6 +167,23 @@ export function VisitBriefDialog({
             items={items.filter((r) => r.journal)}
             empty="No journal entries saved."
           />
+          {!!workspace.visitHistory.length && (
+            <Choices
+              label="Past visits"
+              selected={selection.pastVisitIds}
+              onChange={(id, checked) => toggle('pastVisitIds', id, checked)}
+              items={[...workspace.visitHistory]
+                .sort((a, b) => b.date.localeCompare(a.date))
+                .map((v) => ({
+                  id: v.id,
+                  title: [formatDate(v.date), v.clinic].filter(Boolean).join(' · '),
+                  detail: v.steps.length
+                    ? 'Includes your notes and all follow-up steps'
+                    : 'Includes your visit notes',
+                }))}
+              empty="No past visits saved."
+            />
+          )}
           <p className={styles.hint}>
             Questions appear as written. Select a linked record to include its source reference.
           </p>
@@ -215,9 +225,7 @@ export function VisitBriefDialog({
                 ))}
               </>
             ) : (
-              <p className={styles.empty}>
-                Choose visit details, a question, or a record to start your brief.
-              </p>
+              <p className={styles.empty}>Select something to include in your brief.</p>
             )}
           </article>
         </div>

@@ -66,4 +66,26 @@ describe('patient-selected visit briefs', () => {
         .sections,
     ).toEqual([])
   })
+  it('shares past notes and follow-up steps only for the chosen visit', () => {
+    const saved = newWorkspace()
+    const visit = {
+      id: 'first-visit',
+      recordedAt: '2026-10-02',
+      date: '2026-10-01',
+      clinic: 'October clinic',
+      recap: 'Discussed the report',
+      plan: { ...saved.visit, reason: 'Old private plan' },
+      questions: [{ id: 'old', text: 'Old private question', sourceIds: ['private-id'] }],
+      steps: [{ id: 'step', text: 'Collect a copy', due: '2026-10-09', completedAt: null }],
+    }
+    saved.visitHistory = [visit, { ...visit, id: 'other', recap: 'Another private recap' }]
+    const options = initialBriefSelection(saved)
+    expect(buildPersonalBrief(saved, 'Owner', options, '2026-11-01').sections).toEqual([])
+    const text = briefText(
+      buildPersonalBrief(saved, 'Owner', { ...options, pastVisitIds: [visit.id] }, '2026-11-01'),
+    )
+    expect(text).toContain('Discussed the report')
+    expect(text).toContain('Open · Collect a copy · Due 9 October 2026')
+    expect(text).not.toMatch(/Another private recap|Old private|private-id/)
+  })
 })

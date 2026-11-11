@@ -6,6 +6,7 @@ export interface BriefSelection {
   visitDetails: boolean
   questionIds: string[]
   recordIds: string[]
+  pastVisitIds: string[]
   baseline: string
 }
 
@@ -14,6 +15,7 @@ export function initialBriefSelection(workspace: PersonalWorkspace): BriefSelect
     visitDetails: Object.values(workspace.visit).some(Boolean),
     questionIds: workspace.questions.map((question) => question.id),
     recordIds: [],
+    pastVisitIds: [],
     baseline: '',
   }
 }
@@ -89,6 +91,22 @@ export function buildPersonalBrief(
         .map(
           (r) =>
             `${r.occurredAt} · ${r.title} ${references.get(r.id)}\n${r.source.lines.join('\n')}`,
+        ),
+    },
+    {
+      title: 'My notes from past visits',
+      entries: workspace.visitHistory
+        .filter((v) => selection.pastVisitIds.includes(v.id))
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .map((v) =>
+          [
+            [formatDate(v.date), v.clinic].filter(Boolean).join(' · '),
+            v.recap,
+            ...v.steps.map(
+              (s) =>
+                `${s.completedAt ? 'Completed' : 'Open'} · ${s.text}${s.due ? ` · Due ${formatDate(s.due)}` : ''}`,
+            ),
+          ].join('\n'),
         ),
     },
     {
