@@ -102,6 +102,7 @@ export function usePersonalWorkspace(initial: WorkspaceSnapshot, owner: string) 
   }
   return {
     state: saved.state,
+    revision: saved.revision,
     status,
     error,
     canRetry,

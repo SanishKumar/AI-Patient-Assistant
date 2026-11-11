@@ -31,12 +31,14 @@ import { TrendChart } from './TrendChart'
 import { WorkspaceDialog } from './WorkspaceDialog'
 import { AccountDialog } from './AccountDialog'
 import { VisitBriefDialog } from './VisitBriefDialog'
+import { FollowUpOverview, VisitHistory } from './VisitHistory'
 
 const tabs = [
   { id: 'overview', name: 'Overview', icon: LayoutGrid },
   { id: 'records', name: 'Record library', icon: FileText },
   { id: 'timeline', name: 'Health timeline', icon: History },
   { id: 'visit', name: 'Visit preparation', icon: ListChecks },
+  { id: 'history', name: 'Past visits', icon: CalendarDays },
 ] as const
 
 export function PersonalWorkspace({
@@ -48,11 +50,10 @@ export function PersonalWorkspace({
   saved: WorkspaceSnapshot
   local: boolean
 }) {
-  const { state, status, error, send, upload, retry, busy, canRetry } = usePersonalWorkspace(
-    saved,
-    viewer.id,
-  )
+  const workspace = usePersonalWorkspace(saved, viewer.id)
+  const { state, status, error, send, upload, retry, busy, canRetry } = workspace
   const [tab, setTab] = useState<(typeof tabs)[number]['id']>('overview')
+  const [pastVisit, setPastVisit] = useState<string>()
   const [accountOpen, setAccountOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [uploadOpen, setUploadOpen] = useState(false)
@@ -305,6 +306,13 @@ export function PersonalWorkspace({
                 <small>Personal preparation · no appointment is booked</small>
               </section>
             </div>
+            <FollowUpOverview
+              workspace={workspace}
+              openVisit={(id) => {
+                setPastVisit(id)
+                setTab('history')
+              }}
+            />
             {!!sorted.length && (
               <section className="panel recent-panel">
                 <div className="panel-heading">
@@ -615,6 +623,14 @@ export function PersonalWorkspace({
               </section>
             </div>
           </>
+        )}
+        {tab === 'history' && (
+          <VisitHistory
+            workspace={workspace}
+            expanded={pastVisit}
+            setExpanded={setPastVisit}
+            onSource={openSource}
+          />
         )}
         <footer className="personal-footer">
           <span>

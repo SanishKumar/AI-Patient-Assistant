@@ -69,6 +69,14 @@ export function searchRecords(records: HealthRecord[], query: string) {
   })
 }
 
+export function localCalendarDate(now = new Date()) {
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+  ].join('-')
+}
+
 export function formatDate(date: string, short = false) {
   return new Intl.DateTimeFormat('en-IN', {
     day: 'numeric',

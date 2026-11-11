@@ -1,0 +1,156 @@
+.history {
+  display: grid;
+  gap: 12px;
+}
+.visit {
+  background: #fffcfa;
+  color: #452e42;
+  border: 1px solid #e4d7df;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.summary {
+  width: 100%;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+}
+.summary strong {
+  display: block;
+  font: 550 20px/1.3 var(--font-display);
+  overflow-wrap: anywhere;
+}
+.summary small,
+.tick small {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #71566b;
+  margin-top: 3px;
+}
+.summary > svg {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.expanded {
+  transform: rotate(180deg);
+}
+.stamp {
+  padding: 11px;
+  border-radius: 12px;
+  background: #f6e4de;
+  color: #75444e;
+}
+.visitBody {
+  padding: 0 22px 22px;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.visitBody h3 {
+  font-weight: 750;
+  margin: 16px 0 6px;
+}
+.recap {
+  white-space: pre-wrap;
+  line-height: 1.65;
+}
+.questions {
+  list-style: decimal;
+  padding-left: 20px;
+}
+.questions li + li {
+  margin-top: 8px;
+}
+.questions button {
+  display: flex;
+}
+.actions,
+.followRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.actions {
+  margin-top: 20px;
+}
+.followRow {
+  justify-content: space-between;
+  border-top: 1px solid #e4d7df;
+  padding-top: 8px;
+  overflow-wrap: anywhere;
+}
+.fields,
+.carry,
+.steps {
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+}
+.steps legend {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.steps > button {
+  justify-self: start;
+}
+.planBox {
+  padding: 12px 14px;
+  background: #f8edf1;
+  color: #4e3247;
+  border-radius: 10px;
+}
+.carry {
+  margin-top: 9px;
+  gap: 6px;
+}
+.carry p {
+  font-size: 13px;
+}
+.history .tick,
+.fields .tick {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: row;
+  gap: 9px;
+  padding: 5px 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.history .tick input,
+.fields .tick input {
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: #74445c;
+}
+.stepRow {
+  display: grid;
+  align-items: end;
+  grid-template-columns: minmax(0, 1fr) minmax(135px, 0.6fr) auto;
+  gap: 8px;
+}
+.stepRow input {
+  min-width: 0;
+}
+@media (max-width: 550px) {
+  .stepRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 10px;
+    background: #f7eff4;
+    border-radius: 8px;
+  }
+  .stepRow label:first-child {
+    grid-column: 1 / -1;
+  }
+  .summary {
+    padding: 14px;
+  }
+  .visitBody {
+    padding: 0 15px 18px;
+  }
+}
