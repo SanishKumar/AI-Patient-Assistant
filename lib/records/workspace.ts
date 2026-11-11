@@ -24,18 +24,44 @@ export const noteSchema = z
   .object({ title: text(120).min(1), date: z.string().refine(validDate), text: text(4000).min(1) })
   .strict()
 export type PersonalNote = z.infer<typeof noteSchema>
+export const MAX_VISIT_HISTORY = 100
+export const MAX_VISIT_STEPS = 12
+const stepDraftSchema = z
+  .object({
+    id: z.string().uuid().optional(),
+    text: text(240).min(1),
+    due: z.string().refine((date) => date === '' || validDate(date)),
+  })
+  .strict()
+export const outcomeSchema = z
+  .object({
+    date: z.string().refine(validDate),
+    clinic: text(100),
+    recap: text(3000).min(1),
+    steps: z.array(stepDraftSchema).max(MAX_VISIT_STEPS),
+  })
+  .strict()
+export type VisitOutcome = z.infer<typeof outcomeSchema>
+export interface CompletedVisit extends Omit<VisitOutcome, 'steps'> {
+  id: string
+  recordedAt: string
+  plan: VisitPlan | null
+  questions: VisitQuestion[]
+  steps: { id: string; text: string; due: string; completedAt: string | null }[]
+}
 export interface PersonalWorkspace {
   version: 2
   records: HealthRecord[]
   questions: VisitQuestion[]
   visit: VisitPlan
+  visitHistory: CompletedVisit[]
 }
 export interface WorkspaceSnapshot {
   state: PersonalWorkspace
   revision: number
 }
 export function newWorkspace(): PersonalWorkspace {
-  return { version: 2, records: [], questions: [], visit: { ...emptyVisit } }
+  return { version: 2, records: [], questions: [], visit: { ...emptyVisit }, visitHistory: [] }
 }
 export const commandSchema = z
   .object({
@@ -56,6 +82,36 @@ export const commandSchema = z
         .strict(),
       z.object({ type: z.literal('note'), note: noteSchema }).strict(),
       z.object({ type: z.literal('visit'), visit: visitSchema }).strict(),
+      z
+        .object({
+          type: z.literal('record-visit'),
+          outcome: outcomeSchema,
+          usePlan: z.boolean(),
+          carryQuestionIds: z.array(z.string().uuid()).max(20),
+        })
+        .strict(),
+      z
+        .object({
+          type: z.literal('edit-visit-outcome'),
+          id: z.string().uuid(),
+          outcome: outcomeSchema,
+        })
+        .strict(),
+      z
+        .object({
+          type: z.literal('set-visit-step'),
+          id: z.string().uuid(),
+          stepId: z.string().uuid(),
+          done: z.boolean(),
+        })
+        .strict(),
+      z
+        .object({
+          type: z.literal('remove-visit'),
+          id: z.string().uuid(),
+          confirmation: z.literal('DELETE'),
+        })
+        .strict(),
       z
         .object({
           type: z.literal('question'),

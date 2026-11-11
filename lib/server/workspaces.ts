@@ -1,7 +1,15 @@
 import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
 import { importLabCsv, MAX_IMPORTED_RECORDS } from '../records/import-csv'
-import { commandSchema, newWorkspace, type PersonalWorkspace } from '../records/workspace'
+import {
+  commandSchema,
+  emptyVisit,
+  MAX_VISIT_HISTORY,
+  newWorkspace,
+  type CompletedVisit,
+  type PersonalWorkspace,
+  type VisitOutcome,
+} from '../records/workspace'
 import { displayedMethod, metricLabels, type HealthRecord } from '../records/types'
 import { seal, unseal } from './vault.mjs'
 import type { z } from 'zod'
@@ -40,7 +48,26 @@ export function readWorkspace(db: Database.Database, userId: string): SavedWorks
   const state = JSON.parse(unseal(row.state, `workspace:${userId}`)) as PersonalWorkspace
   if (state.version !== 2 || !Array.isArray(state.records) || !Array.isArray(state.questions))
     throw new Error('Unsupported workspace format')
+  if (state.visitHistory === undefined) state.visitHistory = []
+  if (!Array.isArray(state.visitHistory)) throw new Error('Unsupported visit history format')
   return { state, revision: row.revision }
+}
+
+function visitOutcome(outcome: VisitOutcome, now: string, previous?: CompletedVisit) {
+  // The same instant can fall on the next calendar day at the visit location.
+  const latestLocalDate = new Date(Date.parse(now) + 14 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  if (outcome.date > latestLocalDate)
+    throw new WorkspaceInputError('Enter the date the visit took place.')
+  const supplied = new Set<string>()
+  const steps = outcome.steps.map((step) => {
+    if (!step.id) return { ...step, id: randomUUID(), completedAt: null }
+    const existing = previous?.steps.find((s) => s.id === step.id)
+    if (!existing || supplied.has(step.id))
+      throw new WorkspaceInputError('A follow-up step no longer matches this visit.')
+    supplied.add(step.id)
+    return { ...step, id: step.id, completedAt: existing.completedAt }
+  })
+  return { ...outcome, steps }
 }
 
 export function applyWorkspaceCommand(
@@ -139,6 +166,63 @@ export function applyWorkspaceCommand(
         case 'visit':
           state = { ...state, visit: command.visit }
           break
+        case 'record-visit': {
+          if (state.visitHistory.length >= MAX_VISIT_HISTORY)
+            throw new WorkspaceInputError(
+              `Visit history holds up to ${MAX_VISIT_HISTORY} visits. Remove a past visit to add another.`,
+            )
+          const questions = command.usePlan ? state.questions : []
+          if (command.carryQuestionIds.some((id) => !questions.some((q) => q.id === id)))
+            throw new WorkspaceInputError('A question is no longer in the selected plan.')
+          const visit: CompletedVisit = {
+            ...visitOutcome(command.outcome, now),
+            id: randomUUID(),
+            recordedAt: now,
+            plan: command.usePlan ? state.visit : null,
+            questions,
+          }
+          state = {
+            ...state,
+            visitHistory: [...state.visitHistory, visit],
+            ...(command.usePlan
+              ? {
+                  visit: { ...emptyVisit },
+                  questions: questions.filter((q) => command.carryQuestionIds.includes(q.id)),
+                }
+              : {}),
+          }
+          break
+        }
+        case 'edit-visit-outcome':
+        case 'set-visit-step':
+        case 'remove-visit': {
+          const visit = state.visitHistory.find((v) => v.id === command.id)
+          if (!visit) throw new WorkspaceInputError('This visit is no longer in your workspace.')
+          if (command.type === 'remove-visit') {
+            state = { ...state, visitHistory: state.visitHistory.filter((v) => v.id !== visit.id) }
+            break
+          }
+          let updated: CompletedVisit
+          if (command.type === 'edit-visit-outcome') {
+            updated = { ...visit, ...visitOutcome(command.outcome, now, visit) }
+          } else {
+            if (!visit.steps.some((s) => s.id === command.stepId))
+              throw new WorkspaceInputError('This follow-up step is no longer in this visit.')
+            updated = {
+              ...visit,
+              steps: visit.steps.map((s) =>
+                s.id === command.stepId
+                  ? { ...s, completedAt: command.done ? (s.completedAt ?? now) : null }
+                  : s,
+              ),
+            }
+          }
+          state = {
+            ...state,
+            visitHistory: state.visitHistory.map((v) => (v.id === visit.id ? updated : v)),
+          }
+          break
+        }
         case 'question': {
           const known = new Set(state.records.map((record) => record.id))
           if (command.sourceIds.some((id) => !known.has(id)))
@@ -158,15 +242,21 @@ export function applyWorkspaceCommand(
         case 'remove-question':
           state = { ...state, questions: state.questions.filter((q) => q.id !== command.id) }
           break
-        case 'remove-record':
+        case 'remove-record': {
           if (!state.records.some((r) => r.id === command.id))
             throw new WorkspaceInputError('This record is no longer in your workspace.')
+          const detachSource = (questions: PersonalWorkspace['questions']) =>
+            questions.map((q) => ({
+              ...q,
+              sourceIds: q.sourceIds.filter((id) => id !== command.id),
+            }))
           state = {
             ...state,
             records: state.records.filter((r) => r.id !== command.id),
-            questions: state.questions.map((q) => ({
-              ...q,
-              sourceIds: q.sourceIds.filter((id) => id !== command.id),
+            questions: detachSource(state.questions),
+            visitHistory: state.visitHistory.map((v) => ({
+              ...v,
+              questions: detachSource(v.questions),
             })),
           }
           db.prepare('DELETE FROM record_document WHERE user_id = ? AND id = ?').run(
@@ -174,6 +264,7 @@ export function applyWorkspaceCommand(
             command.id,
           )
           break
+        }
         case 'erase':
           state = newWorkspace()
           db.prepare('DELETE FROM record_document WHERE user_id = ?').run(userId)

@@ -15,7 +15,7 @@ import {
   buildPersonalBrief,
   initialBriefSelection,
 } from '../../lib/records/personal-brief'
-import { emptyVisit, type WorkspaceCommand } from '../../lib/records/workspace'
+import { emptyVisit, MAX_VISIT_STEPS, type WorkspaceCommand } from '../../lib/records/workspace'
 import { seal, unseal } from '../../lib/server/vault.mjs'
 
 let db: Database.Database
@@ -44,6 +44,162 @@ const imported = () =>
   input({ type: 'import-file', name: 'report.csv', content: sampleLabCsv, belongsToMe: true })
 
 describe('personal workspaces', () => {
+  const outcome = {
+    date: '2026-01-20',
+    clinic: 'My clinic',
+    recap: 'Private discussion',
+    steps: [{ text: 'Bring my earlier report', due: '2026-02-01' }],
+  }
+  const recordVisit = {
+    type: 'record-visit' as const,
+    outcome,
+    usePlan: false,
+    carryQuestionIds: [],
+  }
+
+  it('opens older encrypted workspaces without changing their contents or revision', () => {
+    const legacy = { version: 2, records: [], questions: [], visit: { ...emptyVisit } }
+    legacy.visit.reason = 'Saved before visit history'
+    db.prepare('INSERT INTO personal_workspace VALUES (?, ?, ?, ?)').run(
+      'owner-a',
+      seal(JSON.stringify(legacy), 'workspace:owner-a'),
+      9,
+      '2026-01-01',
+    )
+    expect(readWorkspace(db, 'owner-a')).toEqual({
+      revision: 9,
+      state: { ...legacy, visitHistory: [] },
+    })
+    const state = applyWorkspaceCommand(db, 'owner-a', input(recordVisit, 9)).state
+    expect(state.visit).toEqual(legacy.visit)
+    expect(state.visitHistory[0].plan).toBeNull()
+    const corrupt = { ...legacy, visitHistory: null }
+    db.prepare('UPDATE personal_workspace SET state = ? WHERE user_id = ?').run(
+      seal(JSON.stringify(corrupt), 'workspace:owner-a'),
+      'owner-a',
+    )
+    expect(() => readWorkspace(db, 'owner-a')).toThrow('Unsupported visit history')
+  })
+
+  it('moves the selected plan atomically, carries open questions, and detaches removed sources in both places', () => {
+    const report = applyWorkspaceCommand(db, 'owner-a', imported()).state.records[0]
+    const plan = { ...emptyVisit, date: '2026-01-18', clinician: 'Planned clinic' }
+    applyWorkspaceCommand(db, 'owner-a', input({ type: 'visit', visit: plan }, 1))
+    const q = applyWorkspaceCommand(
+      db,
+      'owner-a',
+      input({ ...question, sourceIds: [report.id] }, 2),
+    ).state.questions[0]
+    applyWorkspaceCommand(
+      db,
+      'owner-a',
+      input({ type: 'question', text: 'Already discussed', sourceIds: [] }, 3),
+    )
+    const command = input({ ...recordVisit, usePlan: true, carryQuestionIds: [q.id] }, 4)
+    const saved = applyWorkspaceCommand(db, 'owner-a', command)
+    expect(applyWorkspaceCommand(db, 'owner-a', command)).toEqual(saved)
+    expect(saved.state.visit).toEqual(emptyVisit)
+    expect(saved.state.questions).toEqual([q])
+    expect(saved.state.visitHistory[0]).toMatchObject({
+      date: outcome.date,
+      plan,
+      recap: outcome.recap,
+      questions: [q, { text: 'Already discussed' }],
+    })
+    const removed = applyWorkspaceCommand(
+      db,
+      'owner-a',
+      input({ type: 'remove-record', id: report.id, confirmation: 'DELETE' }, 5),
+    )
+    expect(removed.state.visitHistory[0].questions[0]).toEqual({ ...q, sourceIds: [] })
+    expect(removed.state.questions[0].sourceIds).toEqual([])
+    expect(exportWorkspace(db, 'owner-a').state.visitHistory).toEqual(removed.state.visitHistory)
+    expect(exportWorkspace(db, 'owner-b').state.visitHistory).toEqual([])
+    expect(JSON.stringify(exportWorkspace(db, 'owner-a').activity)).not.toContain(outcome.recap)
+    expect(JSON.stringify(db.prepare('SELECT state FROM personal_workspace').all())).not.toContain(
+      outcome.recap,
+    )
+  })
+
+  it('edits visit notes and dated steps, keeps completion times, and rejects stale or foreign updates', () => {
+    const visit = applyWorkspaceCommand(db, 'owner-a', input(recordVisit)).state.visitHistory[0]
+    const stepId = visit.steps[0].id
+    const done = { type: 'set-visit-step' as const, id: visit.id, stepId, done: true }
+    expect(() => applyWorkspaceCommand(db, 'owner-b', input(done))).toThrow('no longer')
+    const checked = applyWorkspaceCommand(db, 'owner-a', input(done, 1)).state.visitHistory[0]
+      .steps[0]
+    expect(checked.completedAt).toEqual(expect.any(String))
+    const edit = {
+      type: 'edit-visit-outcome' as const,
+      id: visit.id,
+      outcome: {
+        ...outcome,
+        recap: 'Corrected notes',
+        steps: [
+          { ...outcome.steps[0], id: stepId, due: '' },
+          { text: 'Another step', due: '' },
+        ],
+      },
+    }
+    expect(() => applyWorkspaceCommand(db, 'owner-a', input(edit, 1))).toThrow(RevisionConflict)
+    const changes = applyWorkspaceCommand(db, 'owner-a', input(edit, 2)).state.visitHistory[0]
+    expect(changes.steps[0]).toEqual({ ...checked, due: '' })
+    expect(changes.steps[1].completedAt).toBeNull()
+    const reopened = applyWorkspaceCommand(db, 'owner-a', input({ ...done, done: false }, 3))
+    expect(reopened.state.visitHistory[0].steps[0].completedAt).toBeNull()
+    const removed = applyWorkspaceCommand(
+      db,
+      'owner-a',
+      input({ type: 'remove-visit', id: visit.id, confirmation: 'DELETE' }, 4),
+    )
+    expect(removed.state.visitHistory).toEqual([])
+    expect(() => applyWorkspaceCommand(db, 'owner-a', input(done, 5))).toThrow('no longer')
+  })
+
+  it('rejects unknown questions, invented completion data, invalid dates and oversized follow-up lists', () => {
+    expect(() =>
+      applyWorkspaceCommand(
+        db,
+        'owner-a',
+        input({ ...recordVisit, carryQuestionIds: [randomUUID()] }),
+      ),
+    ).toThrow('selected plan')
+    expect(() =>
+      applyWorkspaceCommand(
+        db,
+        'owner-a',
+        input({ ...recordVisit, outcome: { ...outcome, date: '2999-01-01' } }),
+      ),
+    ).toThrow('date')
+    expect(() =>
+      applyWorkspaceCommand(
+        db,
+        'owner-a',
+        input({
+          ...recordVisit,
+          outcome: { ...outcome, steps: [{ ...outcome.steps[0], id: randomUUID() }] },
+        }),
+      ),
+    ).toThrow('matches this visit')
+    for (const steps of [
+      [{ ...outcome.steps[0], completedAt: '2026-01-01' }],
+      [{ ...outcome.steps[0], due: '2026-02-30' }],
+      Array(MAX_VISIT_STEPS + 1).fill(outcome.steps[0]),
+    ]) {
+      expect(
+        commandSchema.safeParse({
+          ...input(recordVisit),
+          command: { ...recordVisit, outcome: { ...outcome, steps } },
+        }).success,
+      ).toBe(false)
+    }
+    expect(readWorkspace(db, 'owner-a').revision).toBe(0)
+    applyWorkspaceCommand(db, 'owner-a', input(recordVisit))
+    expect(
+      applyWorkspaceCommand(db, 'owner-a', input({ type: 'erase', confirmation: 'DELETE' }, 1))
+        .state.visitHistory,
+    ).toEqual([])
+  })
   it('starts empty even when a retired account preview exists', () => {
     db.prepare('INSERT INTO workspace VALUES (?, ?, ?, ?)').run(
       'owner-a',
