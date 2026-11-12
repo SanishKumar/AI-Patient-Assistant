@@ -11,6 +11,7 @@ A personal health record workspace: keep original sources, trace measurements, w
 - Search your records, explore historical snapshots, and compare measurements with matching units and methods.
 - Save a visit plan and questions, then choose which details, reports, and journal entries to bring. Preview the brief, print it, save a PDF through the browser, or download plain text.
 - Record the outcome of an appointment, keep its original questions, and track follow-up steps with optional due dates.
+- Create an expiring link to a selected visit brief, preview its saved copy, and revoke it from your account.
 - Export workspace data, delete individual records, erase the workspace, or delete the account.
 - Public accounts use email verification and password recovery. Password reset revokes existing sessions.
 
@@ -80,6 +81,12 @@ In **Visit preparation**, choose **Build visit brief**. Each new brief starts wi
 The preview, printout, and text download use the same selection. Readings cite the original page or CSV line. Comparisons use selected reports with matching units and known methods. An omitted source is also omitted from comparisons and question references. Review your question text separately since it appears as written.
 
 Choose **Print / save PDF** to open the browser’s print dialog or **Download text** for a plain-text copy. Closing the builder discards these choices. The account export under **My account** still contains the full workspace.
+
+Choose **Share this brief** to create a link lasting one hour, 24 hours, or seven days. Review the preview and confirm the sharing choice. Anyone who holds the link can read and save that fixed copy. Its content stays as it was when shared. Original files are downloaded separately from the private workspace.
+
+Open **Shared briefs** in Visit preparation to copy a link, view its saved copy, check when it was last accessed, or revoke it. Access checks also update the access time. Deleting a selected record, question, or past visit revokes the affected links. Workspace erasure and account deletion disable all its links. Downloads, recipient copies, and backups have their own retention. A local installation produces links reachable on that computer. Sharing across devices requires the public self-hosted installation.
+
+Shared snapshots and their tokens are encrypted on the server. Tokens travel in the URL fragment and in the body of an explicit request to open the brief. Link pages and responses use no-store caching and no-referrer headers. Each account can hold ten active links, with up to 256 KiB of text per snapshot. Expiry stops access immediately, and encrypted contents are cleared on subsequent share operations. Minimal request receipts prevent retries from reviving revoked links.
 
 ## After an appointment
 

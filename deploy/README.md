@@ -40,7 +40,13 @@ docker compose cp web:/data/backup-2026-10-30.sqlite ./backup-2026-10-30.sqlite
 
 Copy the backup to encrypted off-host storage with an explicit retention schedule. The temporary copy in the `records` volume is not off-host protection. Back up the matching data key separately. The application does not automatically schedule backups or purge your backup storage.
 
-To restore, stop the web and mail services and take an operator snapshot of the current volume first. Use a **new empty volume** with the backup at `/data/aether.sqlite`, owned by UID/GID 1000, and the original data key. Do not overwrite a live database or mix a restored main file with old `-wal`/`-shm` files. Start a restricted test deployment first, confirm `PRAGMA integrity_check`, decrypt a test workspace, and verify signin, import, export, and deletion before switching production traffic. A filesystem integrity check alone does not prove a usable recovery.
+To restore, stop the web and mail services and take an operator snapshot of the current volume first. Use a **new empty volume** with the backup at `/data/aether.sqlite`, owned by UID/GID 1000, and the original data key. Do not overwrite a live database or mix a restored main file with old `-wal`/`-shm` files. Before reopening traffic, invalidate every shared brief link in the restored database.
+
+```sh
+docker compose run --rm --no-deps web node scripts/invalidate-shared-briefs.mjs
+```
+
+An older backup may contain a link that was revoked after that backup was taken. Invalidation removes its saved copy and preserves its request receipt. Owners can create fresh links after recovery. Start a restricted test deployment, confirm `PRAGMA integrity_check`, decrypt a test workspace, and verify signin, import, export, and deletion before switching production traffic.
 
 ## Mail and operations
 

@@ -44,6 +44,14 @@ export default function PrivacyPage() {
           to keep or share.
         </p>
         <p>
+          Creating a share link saves an encrypted copy of the selected brief on this server. Anyone
+          holding the link can read and save that copy until it expires or you revoke it. Shared
+          briefs in Visit preparation shows your active links and their last access times. Access
+          checks also update those times. Deleting an included record, question, or past visit
+          revokes the affected links. Workspace erasure and account deletion disable all links.
+          Recipients may retain copies they saved while access was available.
+        </p>
+        <p>
           Downloads stay wherever you saved them. Server backups are managed by the operator and may
           retain deleted data until those backups expire. Ask the operator about their retention
           period, hosting location, and contact process before using an installation with sensitive
