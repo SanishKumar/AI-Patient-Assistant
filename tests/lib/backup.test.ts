@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import Database from 'better-sqlite3'
-import { randomBytes, randomUUID } from 'node:crypto'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -8,6 +8,8 @@ import { join, resolve, sep } from 'node:path'
 import { applyWorkspaceCommand, readWorkspace } from '../../lib/server/workspaces'
 import { uploadDocument, readDocument } from '../../lib/server/documents'
 import { PDFDocument } from 'pdf-lib'
+import { createBriefShare, readSharedBrief } from '../../lib/server/brief-shares'
+import { buildPersonalBrief, initialBriefSelection } from '../../lib/records/personal-brief'
 
 it('backs up committed WAL contents and restores encrypted records and originals using the same key', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'aether-backup-test-'))
@@ -24,6 +26,7 @@ it('backs up committed WAL contents and restores encrypted records and originals
       '001-workspaces.sql',
       '002-personal-workspaces.sql',
       '003-record-documents.sql',
+      '004-brief-shares.sql',
     ])
       db.exec(readFileSync(new URL(`../../migrations/${file}`, import.meta.url), 'utf8'))
     applyWorkspaceCommand(db, 'test-owner', {
@@ -45,10 +48,32 @@ it('backs up committed WAL contents and restores encrypted records and originals
         belongsToMe: true,
       },
     })
+    const selection = initialBriefSelection(saved.state)
+    const preparedOn = new Date().toISOString().slice(0, 10)
+    const shared = createBriefShare(
+      db,
+      { id: 'test-owner', name: 'Backup test owner' },
+      {
+        type: 'create',
+        requestId: randomUUID(),
+        revision: saved.revision,
+        selection,
+        preparedOn,
+        expiresInHours: 1,
+        reviewed: true,
+        previewHash: createHash('sha256')
+          .update(
+            JSON.stringify(
+              buildPersonalBrief(saved.state, 'Backup test owner', selection, preparedOn),
+            ),
+          )
+          .digest('hex'),
+      },
+    )
     execFileSync(process.execPath, ['scripts/backup.mjs', backup], {
       env: { ...process.env, AETHER_DATABASE_PATH: filename },
     })
-    const restored = new Database(backup, { readonly: true })
+    const restored = new Database(backup)
     try {
       expect(restored.pragma('integrity_check', { simple: true })).toBe('ok')
       expect(readWorkspace(restored, 'test-owner').state.questions[0].text).toBe(
@@ -61,8 +86,22 @@ it('backs up committed WAL contents and restores encrypted records and originals
       expect(readDocument(restored, 'test-owner', saved.state.records[0].id)?.bytes).toEqual(
         Buffer.from(original),
       )
+      expect(readSharedBrief(restored, shared.token)?.brief).toEqual(shared.brief)
     } finally {
       restored.close()
+    }
+    execFileSync(process.execPath, ['scripts/invalidate-shared-briefs.mjs'], {
+      env: { ...process.env, AETHER_DATABASE_PATH: backup },
+    })
+    const invalidated = new Database(backup)
+    try {
+      expect(readSharedBrief(invalidated, shared.token)).toBeNull()
+      expect(invalidated.prepare('SELECT payload FROM brief_share').get()).toEqual({
+        payload: null,
+      })
+      expect(readWorkspace(invalidated, 'test-owner').state.questions).toHaveLength(1)
+    } finally {
+      invalidated.close()
     }
     expect(() =>
       execFileSync(process.execPath, ['scripts/backup.mjs', backup], {

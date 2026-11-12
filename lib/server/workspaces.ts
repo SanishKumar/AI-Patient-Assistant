@@ -13,6 +13,7 @@ import {
 import { displayedMethod, metricLabels, type HealthRecord } from '../records/types'
 import { seal, unseal } from './vault.mjs'
 import type { z } from 'zod'
+import { briefShareMetadata, revokeAllBriefShares, revokeBriefSharesForItem } from './brief-shares'
 
 export { commandSchema }
 export type SavedWorkspace = { state: PersonalWorkspace; revision: number }
@@ -199,6 +200,7 @@ export function applyWorkspaceCommand(
           const visit = state.visitHistory.find((v) => v.id === command.id)
           if (!visit) throw new WorkspaceInputError('This visit is no longer in your workspace.')
           if (command.type === 'remove-visit') {
+            revokeBriefSharesForItem(db, userId, 'pastVisit', visit.id)
             state = { ...state, visitHistory: state.visitHistory.filter((v) => v.id !== visit.id) }
             break
           }
@@ -240,11 +242,13 @@ export function applyWorkspaceCommand(
           break
         }
         case 'remove-question':
+          revokeBriefSharesForItem(db, userId, 'question', command.id)
           state = { ...state, questions: state.questions.filter((q) => q.id !== command.id) }
           break
         case 'remove-record': {
           if (!state.records.some((r) => r.id === command.id))
             throw new WorkspaceInputError('This record is no longer in your workspace.')
+          revokeBriefSharesForItem(db, userId, 'record', command.id)
           const detachSource = (questions: PersonalWorkspace['questions']) =>
             questions.map((q) => ({
               ...q,
@@ -266,6 +270,7 @@ export function applyWorkspaceCommand(
           break
         }
         case 'erase':
+          revokeAllBriefShares(db, userId)
           state = newWorkspace()
           db.prepare('DELETE FROM record_document WHERE user_id = ?').run(userId)
           db.prepare('DELETE FROM personal_workspace_event WHERE user_id = ?').run(userId)
@@ -322,6 +327,7 @@ export function exportWorkspace(db: Database.Database, userId: string) {
       ...saved,
       records: saved.state.records,
       activity,
+      sharedBriefs: briefShareMetadata(db, userId),
       ...(legacy ? { retiredSyntheticPreview: JSON.parse(legacy.state) } : {}),
     }
   })()
