@@ -5,6 +5,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { sampleLabCsv } from '../../lib/records/import-csv'
 import { PDFDocument } from 'pdf-lib'
 import { checkVisitHistory } from './visit-history'
+import { checkBriefSharing } from './brief-sharing'
 const origin = 'http://127.0.0.1:3000'
 const password = 'Fictional-preview-4829!'
 async function createAccount(request: APIRequestContext) {
@@ -154,6 +155,7 @@ test('creates an empty personal workspace, saves a journal and visit, and keeps 
   await page.getByRole('button', { name: 'Add question', exact: true }).click()
   await expect(page.locator('.question-list')).toContainText('What should I keep track of?')
   await checkVisitBrief(page, isMobile)
+  await checkBriefSharing(page, isMobile)
   await checkVisitHistory(page, isMobile)
   await page.reload()
   await page.getByRole('button', { name: 'Visit preparation', exact: true }).click()
@@ -203,11 +205,42 @@ test('separates owners and rejects forged identity, bad origins, stale revisions
 }) => {
   test.skip(isMobile, 'API ownership checks are shared across viewport sizes')
   expect((await request.get('/api/workspace')).status()).toBe(401)
+  expect((await request.get('/api/workspace/brief-shares')).status()).toBe(401)
   const a = await playwright.request.newContext({ baseURL: origin }),
     b = await playwright.request.newContext({ baseURL: origin })
   try {
     const ownerA = await createAccount(a),
       ownerB = await createAccount(b)
+    expect((await a.get('/api/workspace/brief-shares')).status()).toBe(403)
+    expect(
+      (
+        await b.get('/api/workspace/brief-shares', {
+          headers: { 'X-Workspace-Owner': ownerA.id },
+        })
+      ).status(),
+    ).toBe(403)
+    expect(
+      (
+        await a.post('/api/workspace/brief-shares', {
+          headers: { Origin: 'https://untrusted.invalid', 'X-Workspace-Owner': ownerA.id },
+          data: { type: 'revoke', id: randomUUID() },
+        })
+      ).status(),
+    ).toBe(403)
+    expect(
+      (
+        await request.post('/api/shared-brief', {
+          headers: { Origin: 'https://untrusted.invalid' },
+          data: { token: 'a'.repeat(43) },
+        })
+      ).status(),
+    ).toBe(403)
+    const unavailable = await request.post('/api/shared-brief', {
+      headers: { Origin: origin },
+      data: { token: 'a'.repeat(43) },
+    })
+    expect(unavailable.status()).toBe(404)
+    expect(unavailable.headers()['cache-control']).toContain('no-store')
     const headers = { Origin: origin, 'X-Workspace-Owner': ownerA.id }
     const data = {
       revision: 0,

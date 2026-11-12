@@ -8,6 +8,8 @@
   display: grid;
   gap: 18px;
   min-width: 0;
+  border: 0;
+  padding: 0;
 }
 .group {
   min-width: 0;
@@ -62,7 +64,7 @@
   display: block;
   font-size: 12px;
   line-height: 1.55;
-  color: #6c5369;
+  color: #563d51;
   font-weight: 400;
 }
 .baseline input {
@@ -94,6 +96,9 @@
   overflow-y: auto;
   font-size: 13px;
   line-height: 1.65;
+}
+.fullPage {
+  max-height: none;
 }
 .paper h3 {
   font: 500 clamp(25px, 2.5vw, 34px)/1.15 var(--font-display);

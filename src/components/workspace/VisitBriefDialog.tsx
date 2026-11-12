@@ -7,6 +7,8 @@ import { formatDate, localCalendarDate } from '@/lib/records/selectors'
 import type { PersonalWorkspace } from '@/lib/records/workspace'
 import { downloadText } from './downloads'
 import { WorkspaceDialog } from './WorkspaceDialog'
+import { VisitBriefPaper } from './VisitBriefPaper'
+import { BriefShareControl, type ShareStatus } from './BriefShareControl'
 import styles from './VisitBriefDialog.module.css'
 
 function Choices({
@@ -57,14 +59,19 @@ export function VisitBriefDialog({
   workspace,
   name,
   onClose,
+  owner,
+  revision,
 }: {
   workspace: PersonalWorkspace
   name: string
   onClose: () => void
+  owner: string
+  revision: number
 }) {
   const [selection, setSelection] = useState(() => initialBriefSelection(workspace))
   const [preparedOn] = useState(() => localCalendarDate())
   const [mobileView, setMobileView] = useState<'choices' | 'preview'>('choices')
+  const [shareStatus, setShareStatus] = useState<ShareStatus>('idle')
   const hasVisitDetails = Object.values(workspace.visit).some(Boolean)
   const brief = buildPersonalBrief(workspace, name, selection, preparedOn)
   const sorted = [...workspace.records].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
@@ -96,7 +103,9 @@ export function VisitBriefDialog({
     <WorkspaceDialog
       open
       wide
-      onClose={onClose}
+      onClose={() => {
+        if (shareStatus !== 'saving') onClose()
+      }}
       title="Build your visit brief"
       description="Choose what to bring to your visit. The preview shows what will appear in your printout or download."
     >
@@ -117,7 +126,11 @@ export function VisitBriefDialog({
         </button>
       </div>
       <div className={styles.builder} data-view={mobileView}>
-        <div className={styles.picker}>
+        <fieldset
+          className={styles.picker}
+          disabled={shareStatus !== 'idle'}
+          aria-label="Brief contents"
+        >
           <label className={styles.choice}>
             <input
               type="checkbox"
@@ -187,7 +200,7 @@ export function VisitBriefDialog({
           <p className={styles.hint}>
             Questions appear as written. Select a linked record to include its source reference.
           </p>
-        </div>
+        </fieldset>
         <div className={styles.preview}>
           <div className={styles.actions}>
             <button
@@ -207,27 +220,17 @@ export function VisitBriefDialog({
               <Download size={15} /> Download text
             </button>
           </div>
-          <article className={styles.paper} aria-label="Brief preview" tabIndex={0}>
-            {hasContent ? (
-              <>
-                <header>
-                  <h3>{brief.title}</h3>
-                  <p>{brief.byline}</p>
-                  <p>{brief.context}</p>
-                </header>
-                {brief.sections.map((section) => (
-                  <section key={section.title}>
-                    <h4>{section.title}</h4>
-                    {section.entries.map((entry, i) => (
-                      <p key={i}>{entry}</p>
-                    ))}
-                  </section>
-                ))}
-              </>
-            ) : (
-              <p className={styles.empty}>Select something to include in your brief.</p>
-            )}
-          </article>
+          <div className={styles.actions}>
+            <BriefShareControl
+              brief={brief}
+              selection={selection}
+              preparedOn={preparedOn}
+              owner={owner}
+              revision={revision}
+              onStatus={setShareStatus}
+            />
+          </div>
+          <VisitBriefPaper brief={brief} />
         </div>
       </div>
     </WorkspaceDialog>
