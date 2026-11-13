@@ -8,6 +8,7 @@ A personal health record workspace: keep original sources, trace measurements, w
 - Import your own supported lab CSVs, review values, and inspect exact source lines and original file fingerprints.
 - Upload PDF reports and PNG/JPEG images, browse their pages, download unchanged originals, and enter readings linked to the page you checked.
 - Keep self-reported journal entries, dated separately from when you saved them.
+- Keep a patient-reported medication and allergy list, link entries to owned records, and choose entries for a visit brief.
 - Search your records, explore historical snapshots, and compare measurements with matching units and methods.
 - Save a visit plan and questions, then choose which details, reports, and journal entries to bring. Preview the brief, print it, save a PDF through the browser, or download plain text.
 - Record the outcome of an appointment, keep its original questions, and track follow-up steps with optional due dates.
@@ -84,7 +85,7 @@ Choose **Print / save PDF** to open the browser’s print dialog or **Download t
 
 Choose **Share this brief** to create a link lasting one hour, 24 hours, or seven days. Review the preview and confirm the sharing choice. Anyone who holds the link can read and save that fixed copy. Its content stays as it was when shared. Original files are downloaded separately from the private workspace.
 
-Open **Shared briefs** in Visit preparation to copy a link, view its saved copy, check when it was last accessed, or revoke it. Access checks also update the access time. Deleting a selected record, question, or past visit revokes the affected links. Workspace erasure and account deletion disable all its links. Downloads, recipient copies, and backups have their own retention. A local installation produces links reachable on that computer. Sharing across devices requires the public self-hosted installation.
+Open **Shared briefs** in Visit preparation to copy a link, view its saved copy, check when it was last accessed, or revoke it. Access checks also update the access time. Deleting a selected record, question, past visit, medication, or allergy concern revokes the affected links. Workspace erasure and account deletion disable all its links. Downloads, recipient copies, and backups have their own retention. A local installation produces links reachable on that computer. Sharing across devices requires the public self-hosted installation.
 
 Shared snapshots and their tokens are encrypted on the server. Tokens travel in the URL fragment and in the body of an explicit request to open the brief. Link pages and responses use no-store caching and no-referrer headers. Each account can hold ten active links, with up to 256 KiB of text per snapshot. Expiry stops access immediately, and encrypted contents are cleared on subsequent share operations. Minimal request receipts prevent retries from reviving revoked links.
 
@@ -99,6 +100,12 @@ Choose **Export calendar dates** in Visit preparation, Past visits, or the Overv
 The preview starts with generic titles. **Include names and details** adds the selected clinic, location, saved local visit time, visit reason, or follow-up text. Calendar providers and anyone with calendar access may see those details. **Request a reminder at 9am the day before** adds a display alarm request. Review notification settings in the calendar receiving the file.
 
 Update or remove imported copies after rescheduling a visit, editing a step, or marking it complete. Calendar apps handle repeated imports differently. The export preserves each item's identifier across edits, while a fresh visit plan gets a new identifier. The file format follows [iCalendar](https://www.rfc-editor.org/rfc/rfc5545.html).
+
+## Medications and allergy concerns
+
+Open **Medications & allergies** to add medications with directions as written and a usage status of Taking, Not taking, or Unsure. New medication entries start as Unsure. Allergy concerns hold a substance or medicine and an optional reaction. Each list holds up to 50 entries. Names, directions, reactions, and statuses are entered by the patient, with a last-updated date and an optional linked record.
+
+Choose individual entries in the visit brief builder to include them. Each new brief starts with both lists unselected. Include a linked record separately to add its numbered reference. Existing shared copies keep the selected content and update dates from when the link was created. Deleting an entry revokes links containing it. Removing a linked source detaches the link and preserves the patient's entry text.
 
 ## Storage and ownership
 

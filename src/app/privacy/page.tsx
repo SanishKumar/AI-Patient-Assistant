@@ -13,8 +13,9 @@ export default function PrivacyPage() {
           Your account stores your name, email address, a password hash, and sessions. Your
           workspace stores the records you import, original CSV text, encrypted PDF/image files,
           your page-linked readings, journal entries, visit plans, questions, past visit notes,
-          follow-up steps and their completion times, and action metadata. The separate demo uses
-          fictional content stored in your browser tab.
+          follow-up steps and their completion times, medication names, directions and usage
+          statuses, allergy concerns and reactions, optional record links, update times, and action
+          metadata. The separate demo uses fictional content stored in your browser tab.
         </p>
         <h2>Where it goes</h2>
         <p>
@@ -48,7 +49,8 @@ export default function PrivacyPage() {
           holding the link can read and save that copy until it expires or you revoke it. Shared
           briefs in Visit preparation shows your active links and their last access times. Access
           checks also update those times. Deleting an included record, question, or past visit
-          revokes the affected links. Workspace erasure and account deletion disable all links.
+          revokes the affected links. Deleting a selected medication or allergy concern also revokes
+          links containing that entry. Workspace erasure and account deletion disable all links.
           Recipients may retain copies they saved while access was available.
         </p>
         <p>
