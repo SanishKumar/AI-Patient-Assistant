@@ -9,6 +9,7 @@ import { downloadText } from './downloads'
 import { WorkspaceDialog } from './WorkspaceDialog'
 import { VisitBriefPaper } from './VisitBriefPaper'
 import { BriefShareControl, type ShareStatus } from './BriefShareControl'
+import { medicationUsageLabels } from '@/lib/records/health-list'
 import styles from './VisitBriefDialog.module.css'
 
 function Choices({
@@ -89,7 +90,11 @@ export function VisitBriefDialog({
         ].join(' · '),
     journal: !!r.source.personalNote,
   }))
-  function toggle(key: 'recordIds' | 'questionIds' | 'pastVisitIds', id: string, checked: boolean) {
+  function toggle(
+    key: 'recordIds' | 'questionIds' | 'pastVisitIds' | 'medicationIds' | 'allergyIds',
+    id: string,
+    checked: boolean,
+  ) {
     setSelection((current) => ({
       ...current,
       [key]: checked ? [...current[key], id] : current[key].filter((v) => v !== id),
@@ -195,6 +200,32 @@ export function VisitBriefDialog({
                     : 'Includes your visit notes',
                 }))}
               empty="No past visits saved."
+            />
+          )}
+          {!!workspace.medications.length && (
+            <Choices
+              label="Medications"
+              selected={selection.medicationIds}
+              onChange={(id, checked) => toggle('medicationIds', id, checked)}
+              items={workspace.medications.map((m) => ({
+                id: m.id,
+                title: m.name,
+                detail: `${medicationUsageLabels[m.usage]} · Patient-reported`,
+              }))}
+              empty="No medications entered."
+            />
+          )}
+          {!!workspace.allergies.length && (
+            <Choices
+              label="Allergy concerns"
+              selected={selection.allergyIds}
+              onChange={(id, checked) => toggle('allergyIds', id, checked)}
+              items={workspace.allergies.map((a) => ({
+                id: a.id,
+                title: a.substance,
+                detail: 'Patient-reported',
+              }))}
+              empty="No allergy concerns entered."
             />
           )}
           <p className={styles.hint}>

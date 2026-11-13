@@ -14,6 +14,7 @@ import {
   ListChecks,
   LockKeyhole,
   Plus,
+  Pill,
   Search,
   Trash2,
 } from 'lucide-react'
@@ -34,6 +35,7 @@ import { VisitBriefDialog } from './VisitBriefDialog'
 import { FollowUpOverview, VisitHistory } from './VisitHistory'
 import { SharedBriefsDialog } from './SharedBriefsDialog'
 import { CalendarExportDialog } from './CalendarExportDialog'
+import { HealthLists } from './HealthLists'
 
 const tabs = [
   { id: 'overview', name: 'Overview', icon: LayoutGrid },
@@ -41,6 +43,7 @@ const tabs = [
   { id: 'timeline', name: 'Health timeline', icon: History },
   { id: 'visit', name: 'Visit preparation', icon: ListChecks },
   { id: 'history', name: 'Past visits', icon: CalendarDays },
+  { id: 'health', name: 'Medications & allergies', icon: Pill },
 ] as const
 
 export function PersonalWorkspace({
@@ -654,6 +657,7 @@ export function PersonalWorkspace({
             onCalendar={() => setCalendarOpen(true)}
           />
         )}
+        {tab === 'health' && <HealthLists workspace={workspace} onSource={openSource} />}
         <footer className="personal-footer">
           <span>
             <LockKeyhole size={13} /> Records organization and visit preparation

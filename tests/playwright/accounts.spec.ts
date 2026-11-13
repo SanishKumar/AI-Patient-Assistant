@@ -7,6 +7,7 @@ import { PDFDocument } from 'pdf-lib'
 import { checkVisitHistory } from './visit-history'
 import { checkBriefSharing } from './brief-sharing'
 import { checkVisitCalendar } from './calendar-export'
+import { checkHealthList } from './health-list'
 const origin = 'http://127.0.0.1:3000'
 const password = 'Fictional-preview-4829!'
 async function createAccount(request: APIRequestContext) {
@@ -158,6 +159,7 @@ test('creates an empty personal workspace, saves a journal and visit, and keeps 
   await checkVisitBrief(page, isMobile)
   await checkVisitCalendar(page)
   await checkBriefSharing(page, isMobile)
+  await checkHealthList(page, isMobile)
   await checkVisitHistory(page, isMobile)
   await page.reload()
   await page.getByRole('button', { name: 'Visit preparation', exact: true }).click()
