@@ -1,12 +1,15 @@
 import { compareMetric, formatDate } from './selectors'
 import type { PersonalWorkspace } from './workspace'
 import { displayedMethod, type Metric, type Observation } from './types'
+import { medicationUsageLabels } from './health-list'
 
 export interface BriefSelection {
   visitDetails: boolean
   questionIds: string[]
   recordIds: string[]
   pastVisitIds: string[]
+  medicationIds: string[]
+  allergyIds: string[]
   baseline: string
 }
 
@@ -16,6 +19,8 @@ export function initialBriefSelection(workspace: PersonalWorkspace): BriefSelect
     questionIds: workspace.questions.map((question) => question.id),
     recordIds: [],
     pastVisitIds: [],
+    medicationIds: [],
+    allergyIds: [],
     baseline: '',
   }
 }
@@ -59,6 +64,40 @@ export function buildPersonalBrief(
           const links = question.sourceIds.map((id) => references.get(id)).filter(Boolean)
           return `${index + 1}. ${question.text}${links.length ? ` ${links.join(' ')}` : ''}`
         }),
+    },
+    {
+      title: 'Medications (patient-reported)',
+      entries: (workspace.medications ?? [])
+        .filter((m) => (selection.medicationIds ?? []).includes(m.id))
+        .map((m) =>
+          [
+            `${m.name} · ${medicationUsageLabels[m.usage]}`,
+            m.directions ? `Directions as entered: ${m.directions}` : 'Directions not entered.',
+            m.sourceId && references.has(m.sourceId)
+              ? `Linked record ${references.get(m.sourceId)}.`
+              : '',
+            `Last updated by patient ${formatDate(m.updatedAt.slice(0, 10))}.`,
+          ]
+            .filter(Boolean)
+            .join('\n'),
+        ),
+    },
+    {
+      title: 'Allergy concerns (patient-reported)',
+      entries: (workspace.allergies ?? [])
+        .filter((a) => (selection.allergyIds ?? []).includes(a.id))
+        .map((a) =>
+          [
+            a.substance,
+            a.reaction ? `Reaction as entered: ${a.reaction}` : 'Reaction not entered.',
+            a.sourceId && references.has(a.sourceId)
+              ? `Linked record ${references.get(a.sourceId)}.`
+              : '',
+            `Last updated by patient ${formatDate(a.updatedAt.slice(0, 10))}.`,
+          ]
+            .filter(Boolean)
+            .join('\n'),
+        ),
     },
     {
       title: 'Changes across selected records',

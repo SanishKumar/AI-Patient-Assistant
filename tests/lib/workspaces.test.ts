@@ -31,6 +31,7 @@ beforeEach(() => {
     '002-personal-workspaces.sql',
     '003-record-documents.sql',
     '004-brief-shares.sql',
+    '005-health-list-shares.sql',
   ])
     db.exec(readFileSync(new URL(`../../migrations/${file}`, import.meta.url), 'utf8'))
 })
@@ -69,7 +70,13 @@ describe('personal workspaces', () => {
     )
     expect(readWorkspace(db, 'owner-a')).toEqual({
       revision: 9,
-      state: { ...legacy, visitHistory: [], visitCalendarId: expect.any(String) },
+      state: {
+        ...legacy,
+        visitHistory: [],
+        visitCalendarId: expect.any(String),
+        medications: [],
+        allergies: [],
+      },
     })
     expect(readWorkspace(db, 'owner-a').state.visitCalendarId).toBe(
       readWorkspace(db, 'owner-a').state.visitCalendarId,

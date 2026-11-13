@@ -14,6 +14,7 @@ import { displayedMethod, metricLabels, type HealthRecord } from '../records/typ
 import { seal, unseal } from './vault.mjs'
 import type { z } from 'zod'
 import { briefShareMetadata, revokeAllBriefShares, revokeBriefSharesForItem } from './brief-shares'
+import { MAX_MEDICATIONS, MAX_ALLERGIES } from '../records/health-list'
 
 export { commandSchema }
 export type SavedWorkspace = { state: PersonalWorkspace; revision: number }
@@ -50,6 +51,10 @@ export function readWorkspace(db: Database.Database, userId: string): SavedWorks
   if (state.version !== 2 || !Array.isArray(state.records) || !Array.isArray(state.questions))
     throw new Error('Unsupported workspace format')
   if (state.visitHistory === undefined) state.visitHistory = []
+  if (state.medications === undefined) state.medications = []
+  if (state.allergies === undefined) state.allergies = []
+  if (!Array.isArray(state.medications) || !Array.isArray(state.allergies))
+    throw new Error('Unsupported health list format')
   if (state.visitCalendarId === undefined)
     state.visitCalendarId = createHash('sha256')
       .update(`legacy-visit-calendar:${userId}`)
@@ -100,6 +105,82 @@ export function applyWorkspaceCommand(
       const command = input.command
       let state = previous.state
       switch (command.type) {
+        case 'save-medication': {
+          const existing = command.id
+            ? state.medications.find((entry) => entry.id === command.id)
+            : undefined
+          if (command.id && !existing)
+            throw new WorkspaceInputError('This medication is no longer in your workspace.')
+          if (
+            command.medication.sourceId &&
+            !state.records.some((record) => record.id === command.medication.sourceId)
+          )
+            throw new WorkspaceInputError('The linked source is not in this workspace.')
+          if (!existing && state.medications.length >= MAX_MEDICATIONS)
+            throw new WorkspaceInputError(
+              'Keep up to 50 medication entries. Remove an entry before adding another.',
+            )
+          const entry = {
+            ...command.medication,
+            id: existing?.id ?? randomUUID(),
+            recordedAt: existing?.recordedAt ?? now,
+            updatedAt: now,
+          }
+          state = {
+            ...state,
+            medications: existing
+              ? state.medications.map((item) => (item.id === entry.id ? entry : item))
+              : [...state.medications, entry],
+          }
+          break
+        }
+        case 'save-allergy': {
+          const existing = command.id
+            ? state.allergies.find((entry) => entry.id === command.id)
+            : undefined
+          if (command.id && !existing)
+            throw new WorkspaceInputError('This allergy concern is no longer in your workspace.')
+          if (
+            command.allergy.sourceId &&
+            !state.records.some((record) => record.id === command.allergy.sourceId)
+          )
+            throw new WorkspaceInputError('The linked source is not in this workspace.')
+          if (!existing && state.allergies.length >= MAX_ALLERGIES)
+            throw new WorkspaceInputError(
+              'Keep up to 50 allergy concerns. Remove an entry before adding another.',
+            )
+          const entry = {
+            ...command.allergy,
+            id: existing?.id ?? randomUUID(),
+            recordedAt: existing?.recordedAt ?? now,
+            updatedAt: now,
+          }
+          state = {
+            ...state,
+            allergies: existing
+              ? state.allergies.map((item) => (item.id === entry.id ? entry : item))
+              : [...state.allergies, entry],
+          }
+          break
+        }
+        case 'remove-medication':
+          if (!state.medications.some((entry) => entry.id === command.id))
+            throw new WorkspaceInputError('This medication is no longer in your workspace.')
+          revokeBriefSharesForItem(db, userId, 'medication', command.id)
+          state = {
+            ...state,
+            medications: state.medications.filter((entry) => entry.id !== command.id),
+          }
+          break
+        case 'remove-allergy':
+          if (!state.allergies.some((entry) => entry.id === command.id))
+            throw new WorkspaceInputError('This allergy concern is no longer in your workspace.')
+          revokeBriefSharesForItem(db, userId, 'allergy', command.id)
+          state = {
+            ...state,
+            allergies: state.allergies.filter((entry) => entry.id !== command.id),
+          }
+          break
         case 'document-review': {
           const record = state.records.find((r) => r.id === command.id)
           if (!record?.source.document)
@@ -268,6 +349,12 @@ export function applyWorkspaceCommand(
             ...state,
             records: state.records.filter((r) => r.id !== command.id),
             questions: detachSource(state.questions),
+            medications: state.medications.map((entry) =>
+              entry.sourceId === command.id ? { ...entry, sourceId: null, updatedAt: now } : entry,
+            ),
+            allergies: state.allergies.map((entry) =>
+              entry.sourceId === command.id ? { ...entry, sourceId: null, updatedAt: now } : entry,
+            ),
             visitHistory: state.visitHistory.map((v) => ({
               ...v,
               questions: detachSource(v.questions),

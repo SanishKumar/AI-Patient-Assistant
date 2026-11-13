@@ -9,6 +9,8 @@ export const briefSelectionSchema = z
     questionIds: identifiers(20),
     recordIds: identifiers(100),
     pastVisitIds: identifiers(100),
+    medicationIds: identifiers(50).default([]),
+    allergyIds: identifiers(50).default([]),
     baseline: z.string().refine((date) => date === '' || validDate(date)),
   })
   .strict()

@@ -27,6 +27,7 @@ it('backs up committed WAL contents and restores encrypted records and originals
       '002-personal-workspaces.sql',
       '003-record-documents.sql',
       '004-brief-shares.sql',
+      '005-health-list-shares.sql',
     ])
       db.exec(readFileSync(new URL(`../../migrations/${file}`, import.meta.url), 'utf8'))
     applyWorkspaceCommand(db, 'test-owner', {

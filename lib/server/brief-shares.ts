@@ -102,6 +102,8 @@ export function createBriefShare(
         [selection.recordIds, saved.state.records],
         [selection.questionIds, saved.state.questions],
         [selection.pastVisitIds, saved.state.visitHistory],
+        [selection.medicationIds, saved.state.medications],
+        [selection.allergyIds, saved.state.allergies],
       ] as const) {
         const known = new Set(available.map((item) => item.id))
         if (requested.some((id) => !known.has(id)))
@@ -151,6 +153,11 @@ export function createBriefShare(
         now,
         now + input.expiresInHours * 60 * 60 * 1000,
       )
+      const item = db.prepare(
+        'INSERT OR IGNORE INTO brief_share_item(share_id, kind, item_id) VALUES (?, ?, ?)',
+      )
+      for (const medicationId of selection.medicationIds) item.run(id, 'medication', medicationId)
+      for (const allergyId of selection.allergyIds) item.run(id, 'allergy', allergyId)
       return ownedShare(db.prepare('SELECT * FROM brief_share WHERE id = ?').get(id) as Row)
     })
     .immediate()
@@ -177,10 +184,16 @@ export function revokeAllBriefShares(db: Database.Database, userId: string, now 
 export function revokeBriefSharesForItem(
   db: Database.Database,
   userId: string,
-  kind: 'record' | 'question' | 'pastVisit',
+  kind: 'record' | 'question' | 'pastVisit' | 'medication' | 'allergy',
   id: string,
   now = Date.now(),
 ) {
+  if (kind === 'medication' || kind === 'allergy') {
+    db.prepare(
+      'UPDATE brief_share SET payload = NULL, revoked_at = coalesce(revoked_at, ?) WHERE user_id = ? AND EXISTS (SELECT 1 FROM brief_share_item WHERE share_id = brief_share.id AND kind = ? AND item_id = ?)',
+    ).run(now, userId, kind, id)
+    return
+  }
   const column = { record: 'record_ids', question: 'question_ids', pastVisit: 'past_visit_ids' }[
     kind
   ]

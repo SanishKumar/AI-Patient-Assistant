@@ -2,6 +2,12 @@ import { z } from 'zod'
 import type { HealthRecord, VisitQuestion } from './types'
 import { validDate } from './import-csv'
 import { documentReviewSchema } from './documents'
+import {
+  medicationSchema,
+  allergySchema,
+  type MedicationEntry,
+  type AllergyEntry,
+} from './health-list'
 
 const text = (length: number) =>
   z
@@ -56,6 +62,8 @@ export interface PersonalWorkspace {
   visit: VisitPlan
   visitCalendarId?: string
   visitHistory: CompletedVisit[]
+  medications: MedicationEntry[]
+  allergies: AllergyEntry[]
 }
 export interface WorkspaceSnapshot {
   state: PersonalWorkspace
@@ -69,6 +77,8 @@ export function newWorkspace(): PersonalWorkspace {
     visit: { ...emptyVisit },
     visitHistory: [],
     visitCalendarId: crypto.randomUUID(),
+    medications: [],
+    allergies: [],
   }
 }
 export const commandSchema = z
@@ -90,6 +100,34 @@ export const commandSchema = z
         .strict(),
       z.object({ type: z.literal('note'), note: noteSchema }).strict(),
       z.object({ type: z.literal('visit'), visit: visitSchema }).strict(),
+      z
+        .object({
+          type: z.literal('save-medication'),
+          id: z.string().uuid().optional(),
+          medication: medicationSchema,
+        })
+        .strict(),
+      z
+        .object({
+          type: z.literal('save-allergy'),
+          id: z.string().uuid().optional(),
+          allergy: allergySchema,
+        })
+        .strict(),
+      z
+        .object({
+          type: z.literal('remove-medication'),
+          id: z.string().uuid(),
+          confirmation: z.literal('DELETE'),
+        })
+        .strict(),
+      z
+        .object({
+          type: z.literal('remove-allergy'),
+          id: z.string().uuid(),
+          confirmation: z.literal('DELETE'),
+        })
+        .strict(),
       z
         .object({
           type: z.literal('record-visit'),

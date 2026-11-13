@@ -30,6 +30,47 @@ const build = (selection: typeof defaults) =>
   buildPersonalBrief(workspace, 'Example Owner', selection, '2026-11-01')
 
 describe('patient-selected visit briefs', () => {
+  it('includes only selected patient-reported health entries and explicitly chosen linked records', () => {
+    const health = newWorkspace()
+    health.records = [first]
+    health.medications = [
+      {
+        id: 'med',
+        name: 'Example supplement',
+        directions: 'Exactly as written',
+        usage: 'not-taking',
+        sourceId: first.id,
+        recordedAt: '2026-11-14T00:00:00Z',
+        updatedAt: '2026-11-14T00:00:00Z',
+      },
+    ]
+    health.allergies = [
+      {
+        id: 'allergy',
+        substance: 'Example ingredient',
+        reaction: '',
+        sourceId: first.id,
+        recordedAt: '2026-11-14T00:00:00Z',
+        updatedAt: '2026-11-14T00:00:00Z',
+      },
+    ]
+    const options = initialBriefSelection(health)
+    expect(buildPersonalBrief(health, 'Owner', options, '2026-11-14').sections).toEqual([])
+    const selection = { ...options, medicationIds: ['med'], allergyIds: ['allergy'] }
+    const text = briefText(buildPersonalBrief(health, 'Owner', selection, '2026-11-14'))
+    expect(text).toContain('Medications (patient-reported)')
+    expect(text).toContain('Example supplement · Not taking')
+    expect(text).toContain('Directions as entered: Exactly as written')
+    expect(text).toContain('Allergy concerns (patient-reported)')
+    expect(text).toContain('Reaction not entered.')
+    expect(text).toContain('Last updated by patient 14 November 2026')
+    expect(text).not.toMatch(/first\.csv|Linked record|Source index|csv-/)
+    const linked = briefText(
+      buildPersonalBrief(health, 'Owner', { ...selection, recordIds: [first.id] }, '2026-11-14'),
+    )
+    expect(linked).toContain('Linked record [1].')
+    expect(linked).toContain('[1] first.csv')
+  })
   it('starts with the visit and questions but no records or linked identifiers', () => {
     const text = briefText(build(defaults))
     expect(text).toContain('Private reason')

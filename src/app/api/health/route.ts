@@ -7,6 +7,7 @@ export async function GET() {
     getDatabase().prepare('SELECT user_id FROM personal_workspace LIMIT 1').get()
     getDatabase().prepare('SELECT id FROM record_document LIMIT 1').get()
     getDatabase().prepare('SELECT id FROM brief_share LIMIT 1').get()
+    getDatabase().prepare('SELECT share_id FROM brief_share_item LIMIT 1').get()
     return Response.json({ status: 'ok' }, { headers: { 'Cache-Control': 'no-store' } })
   } catch {
     return Response.json(

@@ -32,6 +32,7 @@ beforeEach(() => {
     '002-personal-workspaces.sql',
     '003-record-documents.sql',
     '004-brief-shares.sql',
+    '005-health-list-shares.sql',
   ])
     db.exec(readFileSync(new URL(`../../migrations/${name}`, import.meta.url), 'utf8'))
 })
