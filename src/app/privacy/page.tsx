@@ -52,6 +52,12 @@ export default function PrivacyPage() {
           Recipients may retain copies they saved while access was available.
         </p>
         <p>
+          Calendar exports start with generic event titles. You can choose to include names,
+          locations, visit details, and follow-up text in the file. Your calendar provider and
+          anyone with calendar access may see the details you include. Manage imported calendar
+          copies and notification settings in that calendar.
+        </p>
+        <p>
           Downloads stay wherever you saved them. Server backups are managed by the operator and may
           retain deleted data until those backups expire. Ask the operator about their retention
           period, hosting location, and contact process before using an installation with sensitive

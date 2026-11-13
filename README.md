@@ -94,6 +94,12 @@ Choose **Past visits → Record a visit** to enter the actual visit date, your n
 
 Overview shows the first three open steps, with dated items first. Expand the list to see every open step across appointments. Open a past visit to edit your notes and steps, mark a step complete, reopen it, or delete the entry. Due dates appear in your workspace. Each workspace holds up to 100 past visits. In the brief builder, choosing a past visit includes its date, clinic, notes, and step statuses. Each new brief starts with past visits unselected.
 
+Choose **Export calendar dates** in Visit preparation, Past visits, or the Overview follow-up list. Select your saved visit date and open steps with due dates, then download the calendar file and import it into your calendar app. The entries cover whole days and leave those days available. Add an appointment time in your calendar when needed.
+
+The preview starts with generic titles. **Include names and details** adds the selected clinic, location, saved local visit time, visit reason, or follow-up text. Calendar providers and anyone with calendar access may see those details. **Request a reminder at 9am the day before** adds a display alarm request. Review notification settings in the calendar receiving the file.
+
+Update or remove imported copies after rescheduling a visit, editing a step, or marking it complete. Calendar apps handle repeated imports differently. The export preserves each item's identifier across edits, while a fresh visit plan gets a new identifier. The file format follows [iCalendar](https://www.rfc-editor.org/rfc/rfc5545.html).
+
 ## Storage and ownership
 
 Every private read/write requires a session. Public sessions must have a verified email. Mutations check origin, account identity, expected revision, and a unique request ID. Retried requests are idempotent; state and activity commit together. Conflicts return the current version instead of silently overwriting another tab.
