@@ -33,6 +33,7 @@ import { AccountDialog } from './AccountDialog'
 import { VisitBriefDialog } from './VisitBriefDialog'
 import { FollowUpOverview, VisitHistory } from './VisitHistory'
 import { SharedBriefsDialog } from './SharedBriefsDialog'
+import { CalendarExportDialog } from './CalendarExportDialog'
 
 const tabs = [
   { id: 'overview', name: 'Overview', icon: LayoutGrid },
@@ -70,6 +71,7 @@ export function PersonalWorkspace({
   const [visitError, setVisitError] = useState('')
   const [briefOpen, setBriefOpen] = useState(false)
   const [sharesOpen, setSharesOpen] = useState(false)
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const today = new Date().toISOString().slice(0, 10)
   const [asOf, setAsOf] = useState(today)
   const sorted = recordsAsOf(state.records, today)
@@ -310,6 +312,7 @@ export function PersonalWorkspace({
             </div>
             <FollowUpOverview
               workspace={workspace}
+              onCalendar={() => setCalendarOpen(true)}
               openVisit={(id) => {
                 setPastVisit(id)
                 setTab('history')
@@ -462,6 +465,13 @@ export function PersonalWorkspace({
                   onClick={() => setSharesOpen(true)}
                 >
                   Shared briefs
+                </button>
+                <button
+                  className="button button-outline"
+                  disabled={busy}
+                  onClick={() => setCalendarOpen(true)}
+                >
+                  <CalendarDays size={16} /> Export calendar dates
                 </button>
                 <button
                   className="button button-primary"
@@ -641,6 +651,7 @@ export function PersonalWorkspace({
             expanded={pastVisit}
             setExpanded={setPastVisit}
             onSource={openSource}
+            onCalendar={() => setCalendarOpen(true)}
           />
         )}
         <footer className="personal-footer">
@@ -661,6 +672,13 @@ export function PersonalWorkspace({
         />
       )}
       {sharesOpen && <SharedBriefsDialog owner={viewer.id} onClose={() => setSharesOpen(false)} />}
+      {calendarOpen && (
+        <CalendarExportDialog
+          workspace={state}
+          owner={viewer.id}
+          onClose={() => setCalendarOpen(false)}
+        />
+      )}
       <RecordImportDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}

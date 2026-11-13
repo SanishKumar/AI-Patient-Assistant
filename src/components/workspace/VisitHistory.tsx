@@ -13,9 +13,11 @@ type Workspace = ReturnType<typeof usePersonalWorkspace>
 export function FollowUpOverview({
   workspace,
   openVisit,
+  onCalendar,
 }: {
   workspace: Workspace
   openVisit: (id: string) => void
+  onCalendar: () => void
 }) {
   const [showAll, setShowAll] = useState(false)
   const open = workspace.state.visitHistory
@@ -33,6 +35,9 @@ export function FollowUpOverview({
     <section className={`panel recent-panel ${styles.history}`} aria-label="Open follow-up steps">
       <div className="panel-heading">
         <h2>Your follow-up steps</h2>
+        <button className="text-link" disabled={workspace.busy} onClick={onCalendar}>
+          <CalendarDays size={15} /> Export calendar dates
+        </button>
         <span className="count-badge">{open.length} open</span>
       </div>
       {(showAll ? open : open.slice(0, 3)).map(({ visit, step }) => (
@@ -75,11 +80,13 @@ export function VisitHistory({
   expanded,
   setExpanded,
   onSource,
+  onCalendar,
 }: {
   workspace: Workspace
   expanded?: string
   setExpanded: (id?: string) => void
   onSource: (id: string) => void
+  onCalendar: () => void
 }) {
   const { state, send, busy, revision } = workspace
   const [editor, setEditor] = useState<VisitEditor>()
@@ -93,13 +100,18 @@ export function VisitHistory({
           <h1>Past visits</h1>
           <p>Your account of each appointment and the steps you want to take afterward.</p>
         </div>
-        <button
-          className="button button-primary"
-          disabled={busy || visits.length >= MAX_VISIT_HISTORY}
-          onClick={() => setEditor({ revision })}
-        >
-          <Plus size={16} /> Record a visit
-        </button>
+        <div className={styles.actions}>
+          <button className="button button-outline" disabled={busy} onClick={onCalendar}>
+            <CalendarDays size={16} /> Export calendar dates
+          </button>
+          <button
+            className="button button-primary"
+            disabled={busy || visits.length >= MAX_VISIT_HISTORY}
+            onClick={() => setEditor({ revision })}
+          >
+            <Plus size={16} /> Record a visit
+          </button>
+        </div>
       </div>
       {visits.length >= MAX_VISIT_HISTORY && (
         <p className="small-note">

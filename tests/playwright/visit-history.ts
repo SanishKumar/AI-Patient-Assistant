@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { checkFollowUpCalendar } from './calendar-export'
 
 export async function checkVisitHistory(page: Page, mobile: boolean) {
   const nav = page.getByRole('navigation', { name: 'Workspace navigation' })
@@ -99,4 +100,5 @@ export async function checkVisitHistory(page: Page, mobile: boolean) {
   await expect(paper).toContainText('Completed · Bring my journal')
   await expect(paper).not.toContainText('Last journal line')
   await dialog.getByRole('button', { name: 'Close dialog' }).click()
+  await checkFollowUpCalendar(page)
 }

@@ -6,6 +6,7 @@ import { sampleLabCsv } from '../../lib/records/import-csv'
 import { PDFDocument } from 'pdf-lib'
 import { checkVisitHistory } from './visit-history'
 import { checkBriefSharing } from './brief-sharing'
+import { checkVisitCalendar } from './calendar-export'
 const origin = 'http://127.0.0.1:3000'
 const password = 'Fictional-preview-4829!'
 async function createAccount(request: APIRequestContext) {
@@ -155,6 +156,7 @@ test('creates an empty personal workspace, saves a journal and visit, and keeps 
   await page.getByRole('button', { name: 'Add question', exact: true }).click()
   await expect(page.locator('.question-list')).toContainText('What should I keep track of?')
   await checkVisitBrief(page, isMobile)
+  await checkVisitCalendar(page)
   await checkBriefSharing(page, isMobile)
   await checkVisitHistory(page, isMobile)
   await page.reload()
