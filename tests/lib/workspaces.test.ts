@@ -69,8 +69,11 @@ describe('personal workspaces', () => {
     )
     expect(readWorkspace(db, 'owner-a')).toEqual({
       revision: 9,
-      state: { ...legacy, visitHistory: [] },
+      state: { ...legacy, visitHistory: [], visitCalendarId: expect.any(String) },
     })
+    expect(readWorkspace(db, 'owner-a').state.visitCalendarId).toBe(
+      readWorkspace(db, 'owner-a').state.visitCalendarId,
+    )
     const state = applyWorkspaceCommand(db, 'owner-a', input(recordVisit, 9)).state
     expect(state.visit).toEqual(legacy.visit)
     expect(state.visitHistory[0].plan).toBeNull()
@@ -80,6 +83,28 @@ describe('personal workspaces', () => {
       'owner-a',
     )
     expect(() => readWorkspace(db, 'owner-a')).toThrow('Unsupported visit history')
+  })
+  it('keeps a calendar identity through plan edits and starts a new one after archiving or erasure', () => {
+    const plan = { ...emptyVisit, date: '2026-02-01', clinician: 'One clinic' }
+    const first = applyWorkspaceCommand(db, 'owner-a', input({ type: 'visit', visit: plan })).state
+    const edited = applyWorkspaceCommand(
+      db,
+      'owner-a',
+      input({ type: 'visit', visit: { ...plan, date: '2026-02-04' } }, 1),
+    ).state
+    expect(edited.visitCalendarId).toBe(first.visitCalendarId)
+    const archived = applyWorkspaceCommand(
+      db,
+      'owner-a',
+      input({ ...recordVisit, usePlan: true }, 2),
+    ).state
+    expect(archived.visitCalendarId).not.toBe(first.visitCalendarId)
+    const erased = applyWorkspaceCommand(
+      db,
+      'owner-a',
+      input({ type: 'erase', confirmation: 'DELETE' }, 3),
+    ).state
+    expect(erased.visitCalendarId).not.toBe(archived.visitCalendarId)
   })
 
   it('moves the selected plan atomically, carries open questions, and detaches removed sources in both places', () => {

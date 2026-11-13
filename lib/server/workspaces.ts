@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
 import { importLabCsv, MAX_IMPORTED_RECORDS } from '../records/import-csv'
 import {
@@ -50,6 +50,15 @@ export function readWorkspace(db: Database.Database, userId: string): SavedWorks
   if (state.version !== 2 || !Array.isArray(state.records) || !Array.isArray(state.questions))
     throw new Error('Unsupported workspace format')
   if (state.visitHistory === undefined) state.visitHistory = []
+  if (state.visitCalendarId === undefined)
+    state.visitCalendarId = createHash('sha256')
+      .update(`legacy-visit-calendar:${userId}`)
+      .digest('hex')
+  if (
+    typeof state.visitCalendarId !== 'string' ||
+    !/^[a-zA-Z0-9-]{1,100}$/.test(state.visitCalendarId)
+  )
+    throw new Error('Unsupported visit calendar identifier')
   if (!Array.isArray(state.visitHistory)) throw new Error('Unsupported visit history format')
   return { state, revision: row.revision }
 }
@@ -188,6 +197,7 @@ export function applyWorkspaceCommand(
             ...(command.usePlan
               ? {
                   visit: { ...emptyVisit },
+                  visitCalendarId: randomUUID(),
                   questions: questions.filter((q) => command.carryQuestionIds.includes(q.id)),
                 }
               : {}),

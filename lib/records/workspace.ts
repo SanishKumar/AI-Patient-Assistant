@@ -54,6 +54,7 @@ export interface PersonalWorkspace {
   records: HealthRecord[]
   questions: VisitQuestion[]
   visit: VisitPlan
+  visitCalendarId?: string
   visitHistory: CompletedVisit[]
 }
 export interface WorkspaceSnapshot {
@@ -61,7 +62,14 @@ export interface WorkspaceSnapshot {
   revision: number
 }
 export function newWorkspace(): PersonalWorkspace {
-  return { version: 2, records: [], questions: [], visit: { ...emptyVisit }, visitHistory: [] }
+  return {
+    version: 2,
+    records: [],
+    questions: [],
+    visit: { ...emptyVisit },
+    visitHistory: [],
+    visitCalendarId: crypto.randomUUID(),
+  }
 }
 export const commandSchema = z
   .object({
