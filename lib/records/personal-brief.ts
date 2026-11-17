@@ -76,7 +76,7 @@ export function buildPersonalBrief(
             m.sourceId && references.has(m.sourceId)
               ? `Linked record ${references.get(m.sourceId)}.`
               : '',
-            `Last updated by patient ${formatDate(m.updatedAt.slice(0, 10))}.`,
+            `Last updated by patient ${formatDate(m.updatedAt.slice(0, 10))} (UTC).`,
           ]
             .filter(Boolean)
             .join('\n'),
@@ -93,7 +93,7 @@ export function buildPersonalBrief(
             a.sourceId && references.has(a.sourceId)
               ? `Linked record ${references.get(a.sourceId)}.`
               : '',
-            `Last updated by patient ${formatDate(a.updatedAt.slice(0, 10))}.`,
+            `Last updated by patient ${formatDate(a.updatedAt.slice(0, 10))} (UTC).`,
           ]
             .filter(Boolean)
             .join('\n'),

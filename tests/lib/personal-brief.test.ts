@@ -63,7 +63,7 @@ describe('patient-selected visit briefs', () => {
     expect(text).toContain('Directions as entered: Exactly as written')
     expect(text).toContain('Allergy concerns (patient-reported)')
     expect(text).toContain('Reaction not entered.')
-    expect(text).toContain('Last updated by patient 14 November 2026')
+    expect(text).toContain('Last updated by patient 14 November 2026 (UTC)')
     expect(text).not.toMatch(/first\.csv|Linked record|Source index|csv-/)
     const linked = briefText(
       buildPersonalBrief(health, 'Owner', { ...selection, recordIds: [first.id] }, '2026-11-14'),

@@ -14,7 +14,7 @@ import {
 import { WorkspaceDialog } from './WorkspaceDialog'
 import type { usePersonalWorkspace } from './usePersonalWorkspace'
 import styles from './HealthLists.module.css'
-import { formatDate } from '@/lib/records/selectors'
+import { formatLocalTimestampDate } from '@/lib/records/selectors'
 
 type Editor = (
   { kind: 'medication'; entry?: MedicationEntry } | { kind: 'allergy'; entry?: AllergyEntry }
@@ -247,7 +247,7 @@ export function HealthLists({
               </div>
               <small>
                 Patient-reported · Last updated{' '}
-                <time dateTime={m.updatedAt}>{formatDate(m.updatedAt.slice(0, 10))}</time>
+                <time dateTime={m.updatedAt}>{formatLocalTimestampDate(m.updatedAt)}</time>
               </small>
               <p className={styles.verbatim}>{m.directions || 'Directions not entered.'}</p>
               {sourceLink(m.sourceId)}
@@ -304,7 +304,7 @@ export function HealthLists({
               </div>
               <small>
                 Patient-reported · Last updated{' '}
-                <time dateTime={a.updatedAt}>{formatDate(a.updatedAt.slice(0, 10))}</time>
+                <time dateTime={a.updatedAt}>{formatLocalTimestampDate(a.updatedAt)}</time>
               </small>
               <p className={styles.verbatim}>{a.reaction || 'Reaction not entered.'}</p>
               {sourceLink(a.sourceId)}

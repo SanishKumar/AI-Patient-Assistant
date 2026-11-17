@@ -77,6 +77,14 @@ export function localCalendarDate(now = new Date()) {
   ].join('-')
 }
 
+export function formatLocalTimestampDate(value: string) {
+  return new Date(value).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
 export function formatDate(date: string, short = false) {
   return new Intl.DateTimeFormat('en-IN', {
     day: 'numeric',
