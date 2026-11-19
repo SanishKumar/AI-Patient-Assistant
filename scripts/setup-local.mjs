@@ -24,5 +24,5 @@ if (!process.env.AETHER_DATA_KEY) {
 }
 await import('./migrate.mjs')
 console.log(
-  'Local development is ready at http://127.0.0.1:3000. Email verification is bypassed locally; use test data.',
+  'Local development is ready at http://127.0.0.1:3000. Email verification is bypassed locally; use fictional records.',
 )

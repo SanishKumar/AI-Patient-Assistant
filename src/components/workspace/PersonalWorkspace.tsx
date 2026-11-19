@@ -168,8 +168,8 @@ export function PersonalWorkspace({
       <main id="workspace-main" className="personal-main" tabIndex={-1}>
         {local && (
           <p className="local-development-note">
-            Local development · email verification is disabled. Use test data until your server is
-            configured for public accounts.
+            Local development · email verification is disabled. Use fictional records until your
+            server is configured for public accounts.
           </p>
         )}
         <div className={`save-status ${status}`} role="status">

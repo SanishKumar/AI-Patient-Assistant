@@ -21,7 +21,7 @@ docker compose ps
 
 Caddy obtains HTTPS certificates for `AETHER_DOMAIN`. The web process validates configuration and runs idempotent database migrations before accepting requests. The worker begins after the web health check passes. Public signup requires email verification; loopback-only development bypass is disabled in Compose. A public hostname, working DNS, reachable certificate authority, and working SMTP are required to complete first signup.
 
-Check `https://health.your-domain.com/api/health`, create a test account, receive its verification email, sign in, import a test report, and exercise password reset before inviting anyone. Confirm that reset invalidates the old session and that a second account cannot see the first account's records. The fictional demo is at `/demo`; it never seeds personal accounts.
+Check `https://health.your-domain.com/api/health`, create an account with fictional records, receive its verification email, sign in, import a sample report, and exercise password reset before inviting anyone. Confirm that reset invalidates the old session and that a second account cannot see the first account's records. The fictional demo is at `/demo`; it never seeds personal accounts.
 
 ## Persistence and keys
 
@@ -46,7 +46,7 @@ To restore, stop the web and mail services and take an operator snapshot of the 
 docker compose run --rm --no-deps web node scripts/invalidate-shared-briefs.mjs
 ```
 
-An older backup may contain a link that was revoked after that backup was taken. Invalidation removes its saved copy and preserves its request receipt. Owners can create fresh links after recovery. Start a restricted test deployment, confirm `PRAGMA integrity_check`, decrypt a test workspace, and verify signin, import, export, and deletion before switching production traffic.
+An older backup may contain a link that was revoked after that backup was taken. Invalidation removes its saved copy and preserves its request receipt. Owners can create fresh links after recovery. Start a restricted recovery deployment, confirm `PRAGMA integrity_check`, decrypt a workspace containing fictional records, and verify signin, import, export, and deletion before switching production traffic.
 
 ## Mail and operations
 
